@@ -1,7 +1,10 @@
 'use client';
+
 import React, { useState, useRef, useEffect } from 'react';
 import { BackgroundBeams } from '../../components/ui/background-beams';
 import { TextHoverEffect } from '@/components/ui/text-hover-effect';
+import { useRouter } from 'next/navigation';
+import { Input } from '@/components/ui/input';
 
 function Page() {
   const [inputValue, setInputValue] = useState('');
@@ -13,6 +16,12 @@ function Page() {
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
   }, [inputValue]);
+
+  const router = useRouter();
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    router.push(`/task?message=${inputValue}`);
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInputValue(e.target.value);
@@ -32,27 +41,31 @@ function Page() {
         <h1 className="text-5xl font-bold mb-4">Let&apos;s crawl the web</h1>
       </div>
 
-      <div className="relative w-full max-w-2xl mb-[120px] z-3 p-6 backdrop-blur-sm bg-white/10 rounded-xl border border-white/20 shadow-lg">
-        <div className="relative flex items-center">
-          <textarea
-            ref={textareaRef}
-            value={inputValue}
-            onChange={handleInputChange}
-            placeholder="Ask spidey a question..."
-            className="bg-transparent text-white placeholder-gray-400 flex-grow min-h-[48px] max-h-[200px] border-none focus:outline-none focus:ring-0 resize-none overflow-hidden"
-            style={{ height: '48px' }}
-          />
-          <button className="ml-2 text-gray-400  bg-gray-700/50 p-2 rounded-lg hover:bg-gray-600/50 transition-colors border border-white/20">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              className="w-6 h-6"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-            </svg>
-          </button>
+
+
+      <div className="w-full max-w-2xl">
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-gray-800/30 to-gray-700/30 rounded-lg backdrop-blur-sm"></div>
+          <form className="relative flex items-center p-4 rounded-lg" onSubmit={handleSubmit}>
+            <Input
+              type="text"
+              placeholder="Ask spidey a question..."
+              className="bg-transparent text-white placeholder-gray-400 flex-grow outline-none h-12 border-none focus-visible:outline-none focus-within:outline-none"
+              value={inputValue}
+              onChange={handleInputChange}
+            />
+            <button className="ml-2 text-gray-400 bg-gray-700/50 p-2 rounded-lg">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                className="w-6 h-6"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </button>
+          </form>
         </div>
       </div>
     </div>

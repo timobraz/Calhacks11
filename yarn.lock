@@ -9,8 +9,6 @@
   dependencies:
     regenerator-runtime "^0.14.0"
 
-<<<<<<< Updated upstream
-=======
 "@deepgram/captions@^1.1.1":
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/@deepgram/captions/-/captions-1.2.0.tgz#e3d33b494692a4a3c3f81568d8386894c0fc5d9a"
@@ -31,7 +29,7 @@
 
 "@google/generative-ai@^0.21.0":
   version "0.21.0"
-  resolved "https://registry.npmjs.org/@google/generative-ai/-/generative-ai-0.21.0.tgz"
+  resolved "https://registry.yarnpkg.com/@google/generative-ai/-/generative-ai-0.21.0.tgz#a5011aab9e6082e706937b26ef23445933fa0d15"
   integrity sha512-7XhUbtnlkSEZK15kN3t+tzIMxsbKm/dSkKBFalj+20NvPKe1kBY7mR2P7vuijEn+f06z5+A8bVGKO0v39cr6Wg==
 
 "@next/env@14.2.15":
@@ -111,7 +109,6 @@
   dependencies:
     undici-types "~6.19.2"
 
->>>>>>> Stashed changes
 ansi-escapes@^7.0.0:
   version "7.0.0"
   resolved "https://registry.yarnpkg.com/ansi-escapes/-/ansi-escapes-7.0.0.tgz#00fc19f491bbb18e1d481b97868204f92109bfe7"

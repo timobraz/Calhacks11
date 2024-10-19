@@ -4,6 +4,7 @@ import { BackgroundBeams } from '../../components/ui/background-beams';
 import { TextHoverEffect } from '@/components/ui/text-hover-effect';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import Recorder from '@/components/TranscribeButton';
 
 // Separate component for the textarea
 const TextArea = React.memo(({ value, onChange }: { value: string; onChange: (value: string) => void }) => {
@@ -150,6 +151,7 @@ function Page() {
             )}
           </motion.button>
         </div>
+        <Recorder setInputValue={setInputValue} /> {/* Modified: Passing setInputValue */}
       </motion.div>
     </div>
   );

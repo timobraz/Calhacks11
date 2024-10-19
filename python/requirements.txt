@@ -8,14 +8,10 @@ python-dotenv==1.0.1
 matplotlib
 
 google-generativeai<0.6.0
-llama-index-core==0.11.11
-llama-index-embeddings-openai==0.2.5
-llama-index-llms-openai==0.2.9
-llama-index-embeddings-gemini==0.2.1
-llama-index-llms-gemini==0.3.7
-llama-index-multi-modal-llms-gemini==0.3.1
-llama-index-utils-workflow==0.2.1
-llama-parse==0.5.6
-openinference-instrumentation-llama-index==3.0.2
+
+vertexai
+openinference-instrumentation-vertexai
+
+
 arize-phoenix==5.2.2
 arize-phoenix-otel==0.6.1

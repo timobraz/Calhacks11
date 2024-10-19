@@ -2,9 +2,9 @@
   "name": "sfhacks",
   "version": "0.1.0",
   "scripts": {
-    "dev": "concurrently -n fullstack,fast -c blue,green,grey \"cd fullstack && yarn  dev\"  \"cd python && python3 main.py\"",
+    "dev": "concurrently -n fullstack, python -c blue,green \"cd fullstack && yarn dev\"  \"cd python && python3 main.py\"",
     "postinstall": "cd fullstack && yarn install && cd ../python && pip3 install -r requirements.txt",
-    "format": "prettier --write **/*.{css,scss,cjs,js,ts,tsx,yml,json,html}"
+    "format": "prettier --write fullstack/src/**/*.{css,ts,tsx}"
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",

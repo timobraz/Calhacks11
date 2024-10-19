@@ -3,16 +3,15 @@ import time
 import selenium
 from kafka import KafkaConsumer, KafkaProducer
 from kafka.admin import KafkaAdminClient, NewTopic
+
 import json
+
 
 consumer = KafkaConsumer("requests_topic")
 producer = KafkaProducer(bootstrap_servers="localhost:9092")
 
-kafka_admin_client = KafkaAdminClient(
-    bootstrap_servers="localhost:9092", client_id="test"
-)
-
-
+admin_client = KafkaAdminClient(bootstrap_servers="localhost:9092")
+print("listening for requests")
 for message in consumer:
 
     message_string = message.value.decode("utf-8")

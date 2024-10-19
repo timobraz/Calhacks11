@@ -1,4 +1,5 @@
 'use client';
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { BackgroundBeams } from '../../components/ui/background-beams';
 import { TextHoverEffect } from '@/components/ui/text-hover-effect';
@@ -45,34 +46,26 @@ function Page() {
     console.log(`Page rendered ${renderCount.current} times`);
   });
 
+  const router = useRouter();
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    router.push(`/task?message=${inputValue}`);
+  };
+
   const handleInputChange = useCallback((value: string) => {
     setInputValue(value);
   }, []);
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(() => {
     if (!inputValue.trim()) return;
 
     setIsLoading(true);
     try {
-      const response = await fetch('/api/perplexity', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ prompt: inputValue }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('API error:', response.status, errorData);
-        throw new Error(`Failed to get response from API: ${response.status} ${errorData}`);
-      }
-
-      const data = await response.json();
-      router.push(`/dashboard/action?response=${encodeURIComponent(data.response)}`);
+      // Encode the input value to safely include it in the URL
+      const encodedInput = encodeURIComponent(inputValue);
+      router.push(`/dashboard/task?message=${encodedInput}`);
     } catch (error) {
       console.error('Error:', error);
-      // Handle error (e.g., show an error message to the user)
     } finally {
       setIsLoading(false);
     }
@@ -83,7 +76,6 @@ function Page() {
   return (
     <div className="h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-black to-gray-900 text-white">
       <BackgroundBeams />
-      <TextHoverEffect text="SENSE" />
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}

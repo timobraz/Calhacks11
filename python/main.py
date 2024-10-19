@@ -1,5 +1,6 @@
 import asyncio
 import time
+import selenium
 from kafka import KafkaConsumer, KafkaProducer
 from kafka.admin import KafkaAdminClient, NewTopic
 
@@ -7,13 +8,10 @@ from kafka.admin import KafkaAdminClient, NewTopic
 consumer = KafkaConsumer("requests_topic")
 producer = KafkaProducer(bootstrap_servers="localhost:9092")
 
-
-async def main():
-    await asyncio.sleep(2)
-    for _ in range(100):
-        await asyncio.gather(producer.send("requests_topic", b"some_message_bytes"))
+kafka_admin_client = KafkaAdminClient(
+    bootstrap_servers="localhost:9092", client_id="test"
+)
 
 
-main()
 for message in consumer:
     print("message", message)

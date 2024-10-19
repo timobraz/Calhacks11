@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
 import { BackgroundBeams } from '../../components/ui/background-beams';
+import { TextHoverEffect } from '@/components/ui/text-hover-effect';
 
 function Page() {
   const [inputValue, setInputValue] = useState('');
@@ -20,8 +21,9 @@ function Page() {
   return (
     <div className="h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-black to-gray-900 text-white">
       <BackgroundBeams />
+      <TextHoverEffect text="SENSE" />
 
-      <div className="p-6 ">
+      <div className="p-6 z-2 relative">
         <div className="mb-4">
           <span className="bg-teal-400 text-black text-xs font-semibold px-2 py-1 rounded-full mr-2">Project</span>
           <span className="text-teal-400 text-sm">Calhacks 11.0 &gt;</span>
@@ -30,7 +32,7 @@ function Page() {
         <h1 className="text-5xl font-bold mb-4">Let&apos;s crawl the web</h1>
       </div>
 
-      <div className="w-full max-w-2xl p-6 backdrop-blur-sm bg-white/10 rounded-xl border border-white/20 shadow-lg">
+      <div className="relative w-full max-w-2xl mb-[120px] z-3 p-6 backdrop-blur-sm bg-white/10 rounded-xl border border-white/20 shadow-lg">
         <div className="relative flex items-center">
           <textarea
             ref={textareaRef}
@@ -40,7 +42,7 @@ function Page() {
             className="bg-transparent text-white placeholder-gray-400 flex-grow min-h-[48px] max-h-[200px] border-none focus:outline-none focus:ring-0 resize-none overflow-hidden"
             style={{ height: '48px' }}
           />
-          <button className="ml-2 text-gray-400 bg-gray-700/50 p-2 rounded-lg hover:bg-gray-600/50 transition-colors border border-white/20">
+          <button className="ml-2 text-gray-400  bg-gray-700/50 p-2 rounded-lg hover:bg-gray-600/50 transition-colors border border-white/20">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"

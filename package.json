@@ -9,7 +9,8 @@
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
     "dotenv": "^16.4.5",
-    "dotenv-flow": "^4.0.1"
+    "dotenv-flow": "^4.0.1",
+    "lucide-react": "^0.453.0"
   },
   "engines": {
     "node": "^18 || ^20"

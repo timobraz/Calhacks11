@@ -51,7 +51,7 @@ function ConfigPage() {
                 {service.icon}
                 <span className="text-lg">{service.name}</span>
               </div>
-              <DrawerDemo />
+              <DrawerDemo serviceName={service.name} />
             </div>
           ))}
         </div>

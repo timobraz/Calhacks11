@@ -11,8 +11,8 @@ import jason from '../../public/jason.jpeg';
 function Layout({ children }: { children: React.ReactNode }) {
   const links = [
     {
-      label: 'Action',
-      href: '/dashboard/action',
+      label: 'Task',
+      href: '/dashboard/task',
       icon: <IconSparkles className="text-neutral-200 h-5 w-5 flex-shrink-0" />,
     },
     {

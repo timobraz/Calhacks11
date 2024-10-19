@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { BackgroundBeams } from '../../components/ui/background-beams';
 import { TextHoverEffect } from '@/components/ui/text-hover-effect';
@@ -39,18 +38,6 @@ function Page() {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const renderCount = useRef(0);
-
-  useEffect(() => {
-    renderCount.current += 1;
-    console.log(`Page rendered ${renderCount.current} times`);
-  });
-
-  const router = useRouter();
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    router.push(`/task?message=${inputValue}`);
-  };
 
   const handleInputChange = useCallback((value: string) => {
     setInputValue(value);
@@ -61,7 +48,6 @@ function Page() {
 
     setIsLoading(true);
     try {
-      // Encode the input value to safely include it in the URL
       const encodedInput = encodeURIComponent(inputValue);
       router.push(`/dashboard/task?message=${encodedInput}`);
     } catch (error) {
@@ -76,12 +62,13 @@ function Page() {
   return (
     <div className="h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-black to-gray-900 text-white">
       <BackgroundBeams />
+      <TextHoverEffect text="SENSE" />
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.2 }}
       >
-        <TextHoverEffect text="SENSE" />
+
       </motion.div>
 
       <motion.div
@@ -165,7 +152,6 @@ function Page() {
             )}
           </motion.button>
         </div>
-        <div className="mt-2 text-sm text-gray-400">Render count: {renderCount.current}</div>
       </motion.div>
     </div>
   );

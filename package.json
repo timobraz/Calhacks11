@@ -1,0 +1,26 @@
+{
+  "name": "sfhacks",
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "concurrently -n backend,frontend,fast -c blue,green,grey \"cd backend && npm run dev\" \"cd frontend && npm run ios \" \"cd python && python3 main.py\"",
+    "postinstall": "cd backend && npm install && cd ../frontend && npm install",
+    "format": "prettier --write **/*.{css,scss,cjs,js,ts,tsx,yml,json,html}",
+    "lint": "prettier **/*.{css,scss,cjs,js,ts,tsx,yml,json,html} --check && cd site && npm run lint && cd ../api && npm run lint"
+  },
+  "dependencies": {
+    "dotenv-flow": "^4.0.1",
+    "mongodb": "^6.5.0"
+  },
+  "engines": {
+    "node": "^18 || ^20"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.0.2",
+    "@typescript-eslint/parser": "^7.0.2",
+    "concurrently": "^8.2.2",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "lint-staged": "^15.2.0",
+    "prettier": "^3.1.0"
+  }
+}

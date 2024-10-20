@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 function Page() {
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -22,7 +22,7 @@ function Page() {
   const router = useRouter();
   useEffect(() => {
     async function fetchMessage() {
-    const response = await fetch(`/api/twilioRecordingComplete`, {
+      const response = await fetch(`/api/twilioRecordingComplete`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -37,14 +37,12 @@ function Page() {
         if (done) break;
         currentLine += new TextDecoder().decode(value);
         if (currentLine.includes('\n')) {
-          const messages = currentLine
-            .split('\n')
-            .filter((item) => Boolean(item))
+          const messages = currentLine.split('\n').filter((item) => Boolean(item));
           router.push(messages[0]);
         }
       }
     }
-    fetchMessage();
+    // fetchMessage();
   }, []);
   return (
     <div className="min-h-screen w-full flex bg-gradient-to-br from-black to-gray-900 text-white">
@@ -71,9 +69,7 @@ function Page() {
 
       {/* Main content */}
       <div className="flex-1 p-8">
-        <h1 className="text-3xl font-bold mb-6">
-          {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-        </h1>
+        <h1 className="text-3xl font-bold mb-6">{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h1>
         {renderContent()}
       </div>
     </div>

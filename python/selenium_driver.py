@@ -40,6 +40,9 @@ class SeleniumDriver:
         self.driver.set_window_size(1440, 1080)
         self.driver.get("https://www.google.com")
 
+    def save_screenshot(self, path: str):
+        self.driver.save_screenshot(path)
+
     def click(self, selector: str, mouse_action: str, text: Optional[str]):
         if selector == "string" and text:
             # Find the first clickable element matching the text

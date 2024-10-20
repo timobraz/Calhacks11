@@ -1,19 +1,26 @@
 import { NextRequest } from "next/server";
-import { subscribeToTopic, startConsuming, deleteTopic, stopKafkaConnections } from "@/lib/kafka";
+import { startConsuming, deleteTopic, stopKafkaConnections, subscribeToTopic, sendMessage } from "@/lib/kafka";
 
-export async function GET(req: NextRequest, { params }: { params: { taskid: string } }) {
+export async function POST(req: NextRequest, { params }: { params: { taskid: string } }) {
   const { taskid } = params;
   console.log("Task ID:", taskid);
+  const {message} = await req.json();
+  await stopKafkaConnections();
 
   const stream = new ReadableStream({
     async start(controller) {
-      await subscribeToTopic(taskid, true);
+      await subscribeToTopic(taskid);
       console.log(`Subscribed to topic: ${taskid}`);
-      await startConsuming((kafkaMessage) => {
-        const responseMessage = JSON.parse(kafkaMessage.value?.toString() || '{}');
-        const encodedMessage = new TextEncoder().encode(JSON.stringify(responseMessage) + "\n");
-        controller.enqueue(encodedMessage);
-      });
+      
+      await startConsuming((kafkaMessage, topic) => {
+          console.log("RECEIVED MESSAGE", topic);
+          if (topic === taskid) {
+              const responseMessage = JSON.parse(kafkaMessage.value?.toString() || '{}');
+              const encodedMessage = new TextEncoder().encode(JSON.stringify(responseMessage) + "\n");
+              controller.enqueue(encodedMessage);
+            }
+        });
+        await sendMessage("requests_topic", JSON.stringify({ message: message, uuid: taskid , action: "create_browser"}));
     },
     async cancel() {
       console.log("Stream cancelled for task", taskid);
@@ -26,19 +33,16 @@ export async function GET(req: NextRequest, { params }: { params: { taskid: stri
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       "Connection": "keep-alive",
-      "Transfer-Encoding": "chunked",
     },
   });
 }
 
-// This function will be called when a DELETE request is made to this route
 export async function DELETE(req: NextRequest, { params }: { params: { taskid: string } }) {
   const { taskid } = params;
   console.log("Deleting task:", taskid);
   
   try {
-      await deleteTopic(taskid);
-      await stopKafkaConnections();
+    await deleteTopic(taskid);
     
     return new Response(JSON.stringify({ message: `Task ${taskid} deleted successfully` }), {
       status: 200,

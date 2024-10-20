@@ -3,7 +3,8 @@ import { Input } from '@/components/ui/input';
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar } from 'recharts';
+import Image from 'next/image';
+// import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar } from 'recharts';
 
 // Sample data for charts
 const readWriteData = [
@@ -73,42 +74,52 @@ function Task() {
         effectRan.current = true;
       }
     };
-    fetchInitialResponse();
+     if (message && !effectRan.current) {
+      fetchInitialResponse();
+      effectRan.current = true;
+    }
+
   }, [message]);
 
   useEffect(() => {
-    const stream = async () => {
-      try {
-        const responseStream = await fetch(`/api/request/${uuid}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        const reader = responseStream.body?.getReader();
-        if (reader) {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            const text = new TextDecoder().decode(value);
-            const messages: { answer: string; preview: string }[] = text
-              .split('\n')
-              .filter(Boolean)
-              .map((line) => JSON.parse(line))
-              .map((message) => ({ answer: message.message, preview: message.preview }));
-            for (const message of messages) {
-              setMessages((prev) => [...prev, { role: 'assistant', content: message.answer }]);
-              setBrowserPreview(message.preview || '');
+    const streamMessages = async () => {
+      if (!uuid) return;
+
+      const response = await fetch(`/api/request/${uuid}`, {
+        method: 'POST',
+        body: JSON.stringify({ message: input }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const reader = response.body?.getReader();
+      if (!reader) return;
+      let currentLine = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        currentLine += new TextDecoder().decode(value);
+        if (currentLine.includes('\n')) {
+          const messages = currentLine.split('\n').filter(item => Boolean(item)).map(line => JSON.parse(line.trim()));
+          console.log("MESSAGES", messages);
+          for (const message of messages) {
+          setMessages(prev => [...prev, { role: 'assistant', content: message.message }]);
+          if (message.preview) {
+            console.log("PREVIEW", message.preview);
+            setBrowserPreview(message.preview);
             }
           }
+          currentLine = '';
         }
-      } catch (error) {
-        console.error('Error:', error);
       }
     };
-    if (uuid) {
-      stream();
-    }
+
+    streamMessages();
+
+    return () => {
+      // Clean up function if needed
+    };
   }, [uuid]);
 
   const handleDeleteTask = async () => {
@@ -250,12 +261,8 @@ function Task() {
         {/* Selenium Browser Display */}
         <div className="bg-black/30 rounded-lg p-4 mb-4 backdrop-blur-sm">
           <h2 className="text-xl font-semibold text-white mb-2">Selenium Browser Preview</h2>
-          <div className="bg-gray-800 h-48 rounded-lg flex items-center justify-center">
-            {browserPreview ? (
-              <pre className="text-sm text-gray-300 whitespace-pre-wrap">{browserPreview}</pre>
-            ) : (
-              <p className="text-gray-500">Selenium browser preview will appear here...</p>
-            )}
+          <div className="h-full w-full flex justify-center items-center relative">
+            {browserPreview ? <Image src={`data:image/png;base64,${browserPreview}`} alt="Browser Preview" fill className="object-contain" /> : <span className="text-sm text-gray-300 whitespace-pre-wrap">Your browser preview will appear here...</span>}
           </div>
         </div>
 

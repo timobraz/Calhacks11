@@ -1,30 +1,30 @@
 import { NextRequest } from "next/server";
 import { v4 as uuidv4 } from 'uuid';
-import { stopKafkaConnections, sendMessage, createTopic, listTopics } from "@/lib/kafka";
-  
+import { stopKafkaConnections, createTopic } from "@/lib/kafka";
+
 
 export async function POST(req: NextRequest) {
   const { message } = await req.json();
   console.log("Received message:", message);
   const uuid = uuidv4();
-  await createTopic(uuid);
+  const topicName = `task-${uuid}`;
 
-  const topics = await listTopics();
-  console.log("Topics:", topics);
   try {
-    await sendMessage("requests_topic", JSON.stringify({ message: message, uuid: uuid }));
-    return new Response(JSON.stringify({ uuid }), {
+    await createTopic(topicName);
+    console.log(`Topic ${topicName} created successfully`);
+
+
+    return new Response(JSON.stringify({ uuid: topicName }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Error producing message:", error);
-    return new Response(JSON.stringify({ error: "Failed to send message" }), {
+    console.error("Error in POST request:", error);
+    return new Response(JSON.stringify({ error: "Failed to process request" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
   }
-
 }
 
 // This function will be called when the API route is disposed

@@ -3,11 +3,10 @@ import os
 import json
 import tempfile
 from dotenv import load_dotenv
-
+from PIL import Image
 from phoenix.otel import register
 from openinference.instrumentation.vertexai import VertexAIInstrumentor
 from opentelemetry import trace
-
 import vertexai
 from vertexai.generative_models import GenerativeModel, GenerationConfig, Part
 from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
@@ -19,6 +18,12 @@ from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
+
+options = Options()
+options.headless = True
+import base64
+from kafka import KafkaProducer
 
 from prompts import SCHEMA
 
@@ -48,52 +53,87 @@ class SpiderPipeline:
         engine = create_engine(os.getenv("DATABASE_URL"))
         self.db = engine.connect()
 
-        self.selenium = webdriver.Chrome()
-        self.selenium.set_window_size(1920, 1080)
-        self.selenium.get("https://www.google.com")
+        # Set up Chrome options for headless browsing
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
 
-    async def run(self, query: str):
+        # Initialize the WebDriver with headless options
+        self.driver = webdriver.Chrome(options=chrome_options)
+        self.driver.set_window_size(1920, 1080)
+        self.driver.get("https://www.google.com")
+
+    async def take_screenshots(
+        self, producer: KafkaProducer | None = None, uuid: str | None = None
+    ):
+        while True:
+            screenshot_path = tempfile.mktemp(suffix=".png")
+            self.driver.save_screenshot(screenshot_path)
+            image = Image.open(screenshot_path)
+            image = image.resize((image.width // 5, image.height // 5))
+            image.save(screenshot_path)
+            image_bytes = open(screenshot_path, "rb").read()
+            base64_image = base64.b64encode(image_bytes).decode("utf-8")
+            print("SENDING PREVIEW to ", uuid)
+            producer.send(
+                uuid,
+                bytes(
+                    json.dumps(
+                        {
+                            "message": f"screenshot taken",
+                            "preview": base64_image,
+                        }
+                    ),
+                    "utf-8",
+                ),
+            )
+            await asyncio.sleep(5)
+
+    async def run(
+        self, query: str, producer: KafkaProducer | None = None, uuid: str | None = None
+    ):
 
         tracer = trace.get_tracer(__name__)
 
         with tracer.start_as_current_span("spider_pipeline"):
-            inputs = [
-                TextEmbeddingInput(text, self.vector_embedding_task) for text in [query]
-            ]
-            embeddings = self.embed_model.get_embeddings(
-                inputs, output_dimensionality=self.dimensionality
-            )
+            # inputs = [
+            #     TextEmbeddingInput(text, self.vector_embedding_task) for text in [query]
+            # ]
+            # embeddings = self.embed_model.get_embeddings(
+            #     inputs, output_dimensionality=self.dimensionality
+            # )
 
             while True:
                 with tracer.start_as_current_span("take_screenshot"):
-                    WebDriverWait(self.selenium, 10).until(
+                    WebDriverWait(self.driver, 10).until(
                         EC.presence_of_element_located((By.TAG_NAME, "body"))
                     )
 
                     screenshot_path = tempfile.mktemp(suffix=".png")
-                    self.selenium.save_screenshot(screenshot_path)
+                    self.driver.save_screenshot(screenshot_path)
+                    # compress image 5x
+                    image = Image.open(screenshot_path)
+                    image = image.resize((image.width // 10, image.height // 10))
+                    image.save(screenshot_path)
+                    image_bytes = open(screenshot_path, "rb").read()
+                    image_part = Part.from_data(mime_type="image/png", data=image_bytes)
+                    self.driver.get("https://www.bing.com")
 
-                    # image = Image.open(screenshot_path).resize((1920 // 2, 1080 // 2))
-
-                    image_part = Part.from_data(
-                        mime_type="image/png", data=open(screenshot_path, "rb").read()
-                    )
-
-                response = self.llm.generate_content(
-                    [
-                        f"""See this image. Please create an action to take us closer to the user's goal: {query}. If we're done, say 'done'.""",
-                        image_part,
-                    ],
-                    generation_config=self.generation_config,
-                    stream=False,
-                )
+                # response = self.llm.generate_content(
+                #     [
+                #         f"""See this image. Please create an action to take us closer to the user's goal: {query}. If we're done, say 'done'.""",
+                #         image_part,
+                #     ],
+                #     generation_config=self.generation_config,
+                #     stream=False,
+                # )
 
                 os.remove(screenshot_path)
-
-                if "done" in response.text.lower():
-                    break
-
-            self.selenium.quit()
+                await asyncio.sleep(200)
+                # if "done" in response.text.lower():
+                #     break
 
         asyncio.create_task(self.record_pipeline())
 

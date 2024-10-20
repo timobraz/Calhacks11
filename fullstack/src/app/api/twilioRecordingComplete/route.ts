@@ -27,8 +27,9 @@ async function transcribeAudio(recordingSID: string) {
     };
     const recording = await twilioClient.recordings(recordingSID).fetch();
     const transcribe = recording.mediaUrl;
-    const splitUrl = transcribe.split('://');
-    const finalUrl = `https://${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}@${splitUrl[1]}`;
+    
+    // Use environment variables for sensitive information
+    const finalUrl = `https://${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}@${new URL(transcribe).host}${new URL(transcribe).pathname}`;
     console.log('Final URL:', finalUrl);
     const { result, error } = await deepgram.listen.prerecorded.transcribeUrl({ url: finalUrl }, options);
 

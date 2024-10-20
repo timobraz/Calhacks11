@@ -53,15 +53,9 @@ async def main():
     consumer = KafkaConsumer(
         "requests_topic",
         bootstrap_servers=[KAFKA_BROKER],
-        auto_offset_reset="earliest",
-        enable_auto_commit=True,
-        group_id="my-group",
-        value_deserializer=lambda x: json.loads(x.decode("utf-8")),
     )
     producer = KafkaProducer(
         bootstrap_servers=[KAFKA_BROKER],
-        max_request_size=1024 * 1024 * 20,
-        value_serializer=lambda x: json.dumps(x).encode("utf-8"),
     )
     pipeline = SpiderPipeline()
     print("READY FOR REQUESTS")

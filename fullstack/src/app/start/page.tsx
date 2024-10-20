@@ -26,7 +26,7 @@ const TextArea = React.memo(({ value, onChange }: { value: string; onChange: (va
       ref={textareaRef}
       value={value}
       onChange={handleChange}
-      placeholder="Ask spidey a question..."
+      placeholder="Ask Laila a question..."
       className="bg-transparent text-white placeholder-gray-400 flex-grow min-h-[48px] max-h-[200px] border-none focus:outline-none focus:ring-0 resize-none overflow-hidden"
       style={{ height: '48px' }}
     />
@@ -63,7 +63,7 @@ function Page() {
   return (
     <div className="h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-black to-gray-900 text-white">
       <BackgroundBeams />
-      <TextHoverEffect text="SENSE" />
+      <TextHoverEffect text="LAILA" />
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}

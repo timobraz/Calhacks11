@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import { useState, useRef, useCallback, useEffect } from 'react';
 
 interface DeepgramResponse {
@@ -32,21 +32,22 @@ export default function TranscribeButton({ setInputValue }: TranscribeButtonProp
 
   const toggleRecording = useCallback(() => {
     const startRecording = () => {
-      navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(stream => {
+      console.log('startRecording');
+      navigator.mediaDevices
+        .getUserMedia({ audio: true })
+        .then((stream) => {
           audioStreamRef.current = stream;
           const options: MediaRecorderOptions = { mimeType: 'audio/webm' };
           mediaRecorderRef.current = new MediaRecorder(stream, options);
 
           mediaRecorderRef.current.ondataavailable = handleDataAvailable;
-          mediaRecorderRef.current.onstop = () => {
-          };
+          mediaRecorderRef.current.onstop = () => {};
 
           mediaRecorderRef.current.start();
           setIsRecording(true);
           setInputValue(''); // Clear previous input value
         })
-        .catch(error => {
+        .catch((error) => {
           console.error('Error accessing microphone:', error);
           setError('Microphone access denied. Please allow microphone access.');
         });
@@ -58,7 +59,7 @@ export default function TranscribeButton({ setInputValue }: TranscribeButtonProp
         setIsRecording(false);
       }
       if (audioStreamRef.current) {
-        audioStreamRef.current.getTracks().forEach(track => track.stop());
+        audioStreamRef.current.getTracks().forEach((track) => track.stop());
         audioStreamRef.current = null;
       }
     };
@@ -107,6 +108,7 @@ export default function TranscribeButton({ setInputValue }: TranscribeButtonProp
   };
 
   const handleButtonClick = useCallback(() => {
+    console.log('isProcessing', isProcessing);
     if (!isProcessing) {
       toggleRecording();
     }
@@ -118,22 +120,22 @@ export default function TranscribeButton({ setInputValue }: TranscribeButtonProp
         mediaRecorderRef.current.stop();
       }
       if (audioStreamRef.current) {
-        audioStreamRef.current.getTracks().forEach(track => track.stop());
+        audioStreamRef.current.getTracks().forEach((track) => track.stop());
       }
     };
   }, []);
 
   return (
     <div>
-      <button 
-        onClick={handleButtonClick} 
+      <button
+        onClick={handleButtonClick}
         disabled={isProcessing}
-        style={{ 
-          backgroundColor: isRecording ? 'red' : 'green', 
-          color: 'white', 
-          padding: '10px 20px', 
-          border: 'none', 
-          borderRadius: '5px' 
+        style={{
+          backgroundColor: isRecording ? 'red' : '#2DD4BF',
+          color: 'white',
+          padding: '10px 20px',
+          border: 'none',
+          borderRadius: '5px',
         }}
         aria-pressed={isRecording}
         aria-label={isRecording ? 'Stop Recording' : 'Start Recording'}
@@ -146,8 +148,6 @@ export default function TranscribeButton({ setInputValue }: TranscribeButtonProp
     </div>
   );
 }
-
-
 
 // "use client";
 // import { useState, useRef, useCallback, useEffect } from 'react';
@@ -274,15 +274,15 @@ export default function TranscribeButton({ setInputValue }: TranscribeButtonProp
 
 //   return (
 //     <div>
-//       <button 
-//         onClick={handleButtonClick} 
+//       <button
+//         onClick={handleButtonClick}
 //         disabled={isProcessing}
-//         style={{ 
-//           backgroundColor: isRecording ? 'red' : 'green', 
-//           color: 'white', 
-//           padding: '10px 20px', 
-//           border: 'none', 
-//           borderRadius: '5px' 
+//         style={{
+//           backgroundColor: isRecording ? 'red' : 'green',
+//           color: 'white',
+//           padding: '10px 20px',
+//           border: 'none',
+//           borderRadius: '5px'
 //         }}
 //         aria-pressed={isRecording}
 //         aria-label={isRecording ? 'Stop Recording' : 'Start Recording'}

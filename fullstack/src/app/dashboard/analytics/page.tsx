@@ -2,8 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import LiveTranscript from '../../../components/LiveTranscript';
-import TranscriptionDisplay from '../../../components/TranscriptionDisplay';
+
 import Link from 'next/link';
 
 // Sample data for charts
@@ -467,12 +466,6 @@ function AnalyticsPage() {
           <Link href="/dashboard/task" className="text-blue-500 hover:text-blue-700">
             Go to Task Page
           </Link>
-
-          {/* Add TranscriptionDisplay component */}
-          <TranscriptionDisplay />
-
-          {/* Existing components */}
-          {ws && <LiveTranscript ws={ws} />}
 
           {/* Top Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

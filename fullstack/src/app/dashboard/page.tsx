@@ -1,10 +1,45 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+
 function Page() {
   const [activeTab, setActiveTab] = useState('overview');
+  const router = useRouter();
+
+  useEffect(() => {
+    console.log('Setting up EventSource');
+    const eventSource = new EventSource('/api/twilioRecordingComplete');
+
+    eventSource.onopen = () => {
+      console.log('EventSource connection opened');
+    };
+
+    eventSource.onmessage = (event) => {
+      console.log('Received message:', event.data);
+      try {
+        const transcription = JSON.parse(event.data).value;
+        console.log('Parsed transcription:', transcription);
+
+        // Navigate to the task page with the transcription as a query parameter
+        router.push(`/dashboard/task?transcription=${encodeURIComponent(transcription)}`);
+
+        // Close the event source after receiving the transcription
+        eventSource.close();
+      } catch (error) {
+        console.error('Error parsing message:', error);
+      }
+    };
+
+    eventSource.onerror = (error) => {
+      console.error('EventSource error:', error);
+    };
+
+    return () => {
+      console.log('Closing EventSource');
+      eventSource.close();
+    };
+  }, [router]);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -19,31 +54,6 @@ function Page() {
     }
   };
 
-  const router = useRouter();
-  useEffect(() => {
-    async function fetchMessage() {
-      const response = await fetch(`/api/twilioRecordingComplete`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const reader = response.body?.getReader();
-      if (!reader) return;
-      let currentLine = '';
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        currentLine += new TextDecoder().decode(value);
-        if (currentLine.includes('\n')) {
-          const messages = currentLine.split('\n').filter((item) => Boolean(item));
-          router.push(messages[0]);
-        }
-      }
-    }
-    // fetchMessage();
-  }, []);
   return (
     <div className="min-h-screen w-full flex bg-gradient-to-br from-black to-gray-900 text-white">
       {/* Sidebar */}

@@ -9,8 +9,26 @@ import { sendMessage, startConsuming, subscribeToTopic } from '@/lib/kafka';
 // Create a Deepgram client instance
 const deepgram = createClient(process.env.DEEPGRAM_API_KEY!);
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-async function transcribeAudio(recordingSID: string) {
+
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 2000; // 2 seconds
+
+async function retryOperation<T>(operation: () => Promise<T>, retries = MAX_RETRIES): Promise<T> {
   try {
+    return await operation();
+  } catch (error) {
+    if (retries > 0) {
+      console.log(`Retrying operation. Attempts left: ${retries - 1}`);
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
+      return retryOperation(operation, retries - 1);
+    } else {
+      throw error;
+    }
+  }
+}
+
+async function transcribeAudio(recordingSID: string) {
+  return retryOperation(async () => {
     const options = {
       punctuate: true,
       tier: 'enhanced',
@@ -18,8 +36,13 @@ async function transcribeAudio(recordingSID: string) {
     const recording = await twilioClient.recordings(recordingSID).fetch();
     const transcribe = recording.mediaUrl;
 
+    if (!transcribe) {
+      throw new Error('Media URL not available');
+    }
+
     const finalUrl = `https://${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}@${transcribe.split('://')[1]}`;
     console.log('Final URL:', finalUrl);
+
     const { result, error } = await deepgram.listen.prerecorded.transcribeUrl({ url: finalUrl }, options);
 
     if (error) {
@@ -27,11 +50,10 @@ async function transcribeAudio(recordingSID: string) {
       throw new Error('Transcription failed');
     }
 
+    console.log('Deepgram transcription result:', result.results?.channels[0]?.alternatives[0]?.transcript);
+
     return result.results?.channels[0]?.alternatives[0]?.transcript;
-  } catch (error) {
-    console.error('Error during transcription:', error);
-    throw error;
-  }
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -56,28 +78,34 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET() {
+  console.log('GET request received for SSE');
   const stream = new ReadableStream({
     async start(controller) {
+      console.log('Starting SSE stream');
       await subscribeToTopic('phone_topic');
-      console.log(`listening to phone_topic`);
+      console.log('Subscribed to phone_topic');
 
       await startConsuming((kafkaMessage, topic) => {
-        console.log('RECEIVED MESSAGE', topic);
+        console.log('RECEIVED KAFKA MESSAGE', topic, kafkaMessage.value?.toString());
         if (topic === 'phone_topic') {
-          const responseMessage = JSON.parse(kafkaMessage.value?.toString() || '{}');
-          const encodedMessage = new TextEncoder().encode(responseMessage + '\n');
+          const transcription = kafkaMessage.value?.toString() || '';
+          const message = `data: ${JSON.stringify({ value: transcription })}\n\n`;
+          console.log('Sending SSE message:', message);
+          const encodedMessage = new TextEncoder().encode(message);
           controller.enqueue(encodedMessage);
         }
       });
     },
-    async cancel() {},
+    async cancel() {
+      console.log('SSE stream cancelled');
+    },
   });
 
   return new Response(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
+      'Connection': 'keep-alive',
     },
   });
 }

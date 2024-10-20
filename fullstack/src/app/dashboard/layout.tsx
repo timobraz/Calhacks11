@@ -32,7 +32,7 @@ function Layout({ children }: { children: React.ReactNode }) {
     },
     {
       label: 'Logout',
-      href: '#',
+      href: '/start',
       icon: <IconArrowLeft className="text-neutral-200 h-5 w-5 flex-shrink-0" />,
     },
   ];
@@ -83,10 +83,10 @@ function Layout({ children }: { children: React.ReactNode }) {
 }
 export const Logo = () => {
   return (
-    <Link href="/start" className="font-normal flex space-x-2 items-center text-sm text-white py-1 relative z-20">
+    <Link href="/dashboard" className="font-normal flex space-x-2 items-center text-sm text-white py-1 relative z-20">
       <div className="h-5 w-6  bg-white rounded-br-lg rounded-tr-sm rounded-tl-lg rounded-bl-sm flex-shrink-0" />
       <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="font-medium  text-white whitespace-pre">
-        Spider
+        Laila
       </motion.span>
     </Link>
   );

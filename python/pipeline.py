@@ -84,12 +84,32 @@ class SpiderPipeline:
                         {
                             "message": f"screenshot taken",
                             "preview": base64_image,
+                            "display": False,
                         }
                     ),
                     "utf-8",
                 ),
             )
             await asyncio.sleep(5)
+
+    async def navigate(
+        self, url: str, producer: KafkaProducer | None = None, uuid: str | None = None
+    ):
+        print("NAVIGATING TO", url)
+        try:
+            self.driver.get(url)
+            producer.send(
+                uuid,
+                json.dumps(
+                    {
+                        "message": f"Navigated to {url}",
+                        "preview": None,
+                        "display": True,
+                    }
+                ).encode("utf-8"),
+            )
+        except Exception as e:
+            print("ERROR NAVIGATING TO", url, e)
 
     async def run(
         self, query: str, producer: KafkaProducer | None = None, uuid: str | None = None

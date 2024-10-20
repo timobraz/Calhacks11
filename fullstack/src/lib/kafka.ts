@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 const kafka = new Kafka({
   clientId: 'my-app',
-  brokers: ['localhost:9092'],
+  brokers: [process.env.NGROK_URL!], // Use your ngrok address here
 });
 
 const admin = kafka.admin();

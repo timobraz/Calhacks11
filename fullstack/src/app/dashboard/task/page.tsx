@@ -6,24 +6,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 // import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar } from 'recharts';
 
-// Sample data for charts
-const readWriteData = [
-  { name: 'Jan', reads: 4000, writes: 2400 },
-  { name: 'Feb', reads: 3000, writes: 1398 },
-  { name: 'Mar', reads: 2000, writes: 9800 },
-  { name: 'Apr', reads: 2780, writes: 3908 },
-  { name: 'May', reads: 1890, writes: 4800 },
-  { name: 'Jun', reads: 2390, writes: 3800 },
-];
-
-const latencyData = [
-  { name: 'Jan', latency: 35 },
-  { name: 'Feb', latency: 28 },
-  { name: 'Mar', latency: 42 },
-  { name: 'Apr', latency: 30 },
-  { name: 'May', latency: 25 },
-  { name: 'Jun', latency: 32 },
-];
 
 function Task() {
   const [input, setInput] = useState('');

@@ -40,7 +40,6 @@ export default function TranscribeButton({ setInputValue }: TranscribeButtonProp
 
           mediaRecorderRef.current.ondataavailable = handleDataAvailable;
           mediaRecorderRef.current.onstop = () => {
-            // Optional: Handle actions after recording stops
           };
 
           mediaRecorderRef.current.start();

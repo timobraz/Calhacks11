@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 // import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar } from 'recharts';
 
-å// Sample data for charts
 
 function Task() {
   const [input, setInput] = useState('');
@@ -171,14 +170,10 @@ function Task() {
       if (!response.ok) {
         throw new Error('Failed to get response from Perplexity API');
       }
-<<<<<<< HEAD
-      if (!uuid) {
-=======
 
       const data = await response.json();
       setMessages((prev) => [...prev, { role: 'assistant', content: data.response }]);
       if(!uuid) {
->>>>>>> 1781859 (conv)
         const taskResponse = await fetch('/api/request', {
           method: 'POST',
           body: JSON.stringify({ message: newPrompt }),

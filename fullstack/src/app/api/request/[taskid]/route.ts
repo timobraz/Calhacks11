@@ -25,6 +25,9 @@ export async function POST(req: NextRequest, { params }: { params: { taskid: str
     async cancel() {
       console.log('Stream cancelled for task', taskid);
       await stopKafkaConnections();
+      const convId = `conv-${taskid.split('-')[1]}`;
+      await deleteTopic(convId);
+      await deleteTopic(taskid);
     },
   });
 
@@ -53,6 +56,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { taskid: s
 
   try {
     await deleteTopic(taskid);
+    const convId = `conv-${taskid.split('-')[1]}`;
+    await deleteTopic(convId);
 
     return new Response(JSON.stringify({ message: `Task ${taskid} deleted successfully` }), {
       status: 200,

@@ -15,6 +15,7 @@
     "@tabler/icons-react": "^3.19.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
+    "formidable": "^3.5.2",
     "framer-motion": "^11.11.9",
     "kafkajs": "^2.2.4",
     "lucide-react": "^0.453.0",
@@ -30,7 +31,8 @@
     "uuid": "^10.0.0",
     "vaul": "^1.1.0",
     "ffmpeg-static": "^5.1.0",
-    "fluent-ffmpeg": "^2.1.2"
+    "fluent-ffmpeg": "^2.1.2",
+    "xmlbuilder": "^15.1.1"
   },
   "devDependencies": {
     "@types/node": "^20",

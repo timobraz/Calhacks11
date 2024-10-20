@@ -90,7 +90,7 @@ class SpiderPipeline:
                     "utf-8",
                 ),
             )
-            await asyncio.sleep(5)
+            await asyncio.sleep(2)
 
     async def navigate(
         self, url: str, producer: KafkaProducer | None = None, uuid: str | None = None

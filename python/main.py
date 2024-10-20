@@ -6,7 +6,7 @@ from pipeline import SpiderPipeline
 KAFKA_BROKER = "4.tcp.us-cal-1.ngrok.io:18817"  # Use your ngrok address here
 
 
-async def process_message(message, pipeline, producer):
+async def process_message(message, pipeline: SpiderPipeline, producer: KafkaProducer):
     message_string = message.value.decode("utf-8")
     message_json = json.loads(message_string)
     tasks = []

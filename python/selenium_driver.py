@@ -22,6 +22,9 @@ class SeleniumDriver:
         self.driver.set_window_size(1440, 1080)
         self.driver.get("https://www.google.com")
 
+    def get(self, url: str):
+        self.driver.get(url)
+
     def wait_until_loaded(self):
         def page_has_loaded(driver):
             return driver.execute_script("return document.readyState") == "complete"

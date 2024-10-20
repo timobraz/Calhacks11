@@ -113,6 +113,14 @@ class SpiderPipeline:
         except Exception as e:
             print("ERROR NAVIGATING TO", url, e)
 
+    async def send_message(
+        self,
+        producer: KafkaProducer | None = None,
+        uuid: str | None = None,
+        message: str = "",
+    ):
+        producer.send(uuid, message.encode("utf-8"))
+
     async def run(
         self, query: str, producer: KafkaProducer | None = None, uuid: str | None = None
     ):

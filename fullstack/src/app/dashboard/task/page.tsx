@@ -89,7 +89,7 @@ function Task() {
 
       const response = await fetch(`/api/request/${uuid}`, {
         method: 'POST',
-        body: JSON.stringify({ message: input }),
+        body: JSON.stringify({ message: prompt }),
         headers: {
           'Content-Type': 'application/json',
         },
@@ -125,7 +125,9 @@ function Task() {
     streamMessages();
 
     return () => {
-      // Clean up function if needed
+      if(uuid) {
+        handleDeleteTask();
+      }
     };
   }, [uuid]);
 

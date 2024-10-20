@@ -1,9 +1,10 @@
 selenium
+numpy
 kafka-python
 pymysql
 SQLAlchemy
-boto3
-botocore
+urllib3
+
 python-dotenv==1.0.1
 matplotlib
 

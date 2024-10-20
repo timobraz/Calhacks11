@@ -259,12 +259,24 @@ function Task() {
         transition={{ duration: 0.5, delay: 0.2 }}
       >
         {/* Selenium Browser Display */}
-        <div className="bg-black/30 rounded-lg p-4 mb-4 backdrop-blur-sm">
-          <h2 className="text-xl font-semibold text-white mb-2">Selenium Browser Preview</h2>
+        <div className="w-full flex-1 bg-gray-900 p-4 overflow-auto relative ">
+        <div className="bg-black rounded-lg p-4  flex flex-col h-full">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Selenium Browser Preview</h2>
+            <div className=" space-x-2">
+              <button className="p-1 bg-gray-800 rounded">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </button>
+            </div>
+            
+          </div >
           <div className="h-full w-full flex justify-center items-center relative">
-            {browserPreview ? <Image src={`data:image/png;base64,${browserPreview}`} alt="Browser Preview" fill className="object-contain" /> : <span className="text-sm text-gray-300 whitespace-pre-wrap">Your browser preview will appear here...</span>}
+            {browserPreview ? <Image src={`data:image/png;base64,${browserPreview}`} alt="Browser Preview" fill className="object-contain " /> : <span className="text-sm text-gray-300 whitespace-pre-wrap">Your browser preview will appear here...</span>}
           </div>
         </div>
+      </div>
 
         {/* Configuration Input Section */}
         <AnimatePresence>

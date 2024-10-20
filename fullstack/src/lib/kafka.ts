@@ -22,8 +22,7 @@ export const getConsumer = async (): Promise<Consumer> => {
 
 export const getProducer = async (): Promise<Producer> => {
   if (!producer) {
-    producer = kafka.producer({
-    });
+    producer = kafka.producer({});
     await producer.connect();
   }
   return producer;
@@ -34,16 +33,16 @@ export async function listTopics() {
   return topics;
 }
 
-export async function createTopic(topic: string) {
+export async function createTopic(topic: string, config?: { name: string; value: string }[]) {
   await admin.createTopics({
-    topics: [{
-      topic,
-      numPartitions: 3,
-      replicationFactor: 1,
-      configEntries: [
-        { name: 'max.message.bytes', value: '6291456' }, // 6 MB
-      ]
-    }]
+    topics: [
+      {
+        topic,
+        numPartitions: 1,
+        replicationFactor: 1,
+        ...(config && { configEntries: config }),
+      },
+    ],
   });
 }
 
@@ -62,7 +61,7 @@ export async function deleteTopic(topic: string) {
 }
 
 export async function subscribeToTopic(topic: string) {
-  console.log("SUBSCRIBING TO TOPIC", topic);
+  console.log('SUBSCRIBING TO TOPIC', topic);
   if (!subscribedTopics.has(topic)) {
     subscribedTopics.add(topic);
     await updateConsumerSubscriptions();

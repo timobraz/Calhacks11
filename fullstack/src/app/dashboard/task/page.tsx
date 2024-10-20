@@ -58,8 +58,6 @@ function Task() {
       } catch (error) {
         console.error('Error:', error);
       }
-      setUuid(uuid);
-      effectRan.current = true;
     };
     if (prompt && !effectRan.current) {
       fetchInitialResponse();
@@ -69,7 +67,6 @@ function Task() {
 
   useEffect(() => {
     const streamMessages = async () => {
-      // if (!uuid) return;
 
       console.log('MADE BACKEND');
 

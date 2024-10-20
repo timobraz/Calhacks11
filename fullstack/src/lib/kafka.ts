@@ -1,5 +1,4 @@
 import { Kafka, Consumer, Producer, KafkaMessage } from 'kafkajs';
-import { v4 as uuidv4 } from 'uuid';
 
 const kafka = new Kafka({
   clientId: 'my-app',

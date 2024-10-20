@@ -14,7 +14,6 @@ function Task() {
   const [uuid, setUuid] = useState('');
   const [convId, setConvId] = useState('');
   const [showConfig, setShowConfig] = useState(false);
-  const [configInput, setConfigInput] = useState('');
   const effectRan = useRef(false);
 
   const searchParams = useSearchParams();
@@ -56,25 +55,9 @@ function Task() {
           setUuid(uuid);
           setConvId(convId);
         } catch (error) {
-          console.error('Error:', error);
-        }
-
-        const data = await response.json();
-        setMessages((prev) => [...prev, { role: 'assistant', content: data.response }]);
-
-        // Now that we have the initial response, we can start the task
-        const taskResponse = await fetch('/api/request', {
-          method: 'POST',
-          body: JSON.stringify({ message: data.response }),
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        const { uuid } = await taskResponse.json();
-        setUuid(uuid);
-      } catch (error) {
         console.error('Error:', error);
       }
+      setUuid(uuid);
       effectRan.current = true;
     };
     if (prompt && !effectRan.current) {

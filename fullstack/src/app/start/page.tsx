@@ -21,6 +21,32 @@ const TextArea = React.memo(({ value, onChange }: { value: string; onChange: (va
     }
   }, [value]);
 
+  const router = useRouter();
+  useEffect(() => {
+    async function fetchMessage() {
+      const response = await fetch(`/api/twilioRecordingComplete`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const reader = response.body?.getReader();
+      if (!reader) return;
+      let currentLine = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        currentLine += new TextDecoder().decode(value);
+        if (currentLine.includes('\n')) {
+          const messages = currentLine.split('\n').filter((item) => Boolean(item));
+          router.push(messages[0]);
+        }
+      }
+    }
+    fetchMessage();
+  }, []);
+
   return (
     <textarea
       ref={textareaRef}

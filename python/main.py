@@ -3,6 +3,8 @@ import json
 from kafka import KafkaConsumer, KafkaProducer
 from pipeline import SpiderPipeline
 
+KAFKA_BROKER = "4.tcp.us-cal-1.ngrok.io:18817"  # Use your ngrok address here
+
 
 async def process_message(message, pipeline, producer):
     message_string = message.value.decode("utf-8")
@@ -48,9 +50,18 @@ async def consume_messages(consumer, pipeline, producer):
 
 
 async def main():
-    consumer = KafkaConsumer("requests_topic")
+    consumer = KafkaConsumer(
+        "requests_topic",
+        bootstrap_servers=[KAFKA_BROKER],
+        auto_offset_reset="earliest",
+        enable_auto_commit=True,
+        group_id="my-group",
+        value_deserializer=lambda x: json.loads(x.decode("utf-8")),
+    )
     producer = KafkaProducer(
-        bootstrap_servers="localhost:9092", max_request_size=1024 * 1024 * 20
+        bootstrap_servers=[KAFKA_BROKER],
+        max_request_size=1024 * 1024 * 20,
+        value_serializer=lambda x: json.dumps(x).encode("utf-8"),
     )
     pipeline = SpiderPipeline()
     print("READY FOR REQUESTS")

@@ -6,13 +6,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 // import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar } from 'recharts';
 
-// Sample data for charts
+å// Sample data for charts
 
 function Task() {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
   const [browserPreview, setBrowserPreview] = useState('');
   const [uuid, setUuid] = useState('');
+  const [convId, setConvId] = useState('');
   const [showConfig, setShowConfig] = useState(false);
   const [configInput, setConfigInput] = useState('');
   const effectRan = useRef(false);
@@ -37,8 +38,26 @@ function Task() {
           body: JSON.stringify({ prompt: decodeURIComponent(prompt) }),
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to get response from Perplexity API');
+          if (!response.ok) {
+            throw new Error('Failed to get response from Perplexity API');
+          }
+
+          const data = await response.json();
+          setMessages((prev) => [...prev, { role: 'assistant', content: data.response }]);
+
+          // Now that we have the initial response, we can start the task
+          const taskResponse = await fetch('/api/request', {
+            method: 'POST',
+            body: JSON.stringify({ message: data.response }),
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          const { uuid, convId } = await taskResponse.json();
+          setUuid(uuid);
+          setConvId(convId);
+        } catch (error) {
+          console.error('Error:', error);
         }
 
         const data = await response.json();
@@ -91,10 +110,12 @@ function Task() {
             .map((line) => JSON.parse(line.trim()));
           console.log('MESSAGES', messages);
           for (const message of messages) {
-            setMessages((prev) => [...prev, { role: 'assistant', content: message.message }]);
-            if (message.preview) {
-              console.log('PREVIEW', message.preview);
-              setBrowserPreview(message.preview);
+          if(message.display === true) {
+            setMessages(prev => [...prev, { role: 'assistant', content: message.message }]);
+          }
+          if (message.preview) {
+            console.log('PREVIEW', message.preview);
+            setBrowserPreview(message.preview);
             }
           }
           currentLine = '';
@@ -150,7 +171,14 @@ function Task() {
       if (!response.ok) {
         throw new Error('Failed to get response from Perplexity API');
       }
+<<<<<<< HEAD
       if (!uuid) {
+=======
+
+      const data = await response.json();
+      setMessages((prev) => [...prev, { role: 'assistant', content: data.response }]);
+      if(!uuid) {
+>>>>>>> 1781859 (conv)
         const taskResponse = await fetch('/api/request', {
           method: 'POST',
           body: JSON.stringify({ message: newPrompt }),
@@ -158,12 +186,23 @@ function Task() {
             'Content-Type': 'application/json',
           },
         });
-        const { uuid } = await taskResponse.json();
+        const { uuid, convId } = await taskResponse.json();
         setUuid(uuid);
+        setConvId(convId);
+        console.log('UUID', uuid);
+        console.log('CONV ID', convId);
+      }
+      else {
+         await fetch(`/api/request/${convId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ message: input, action: 'navigate' }),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
       }
 
-      const data = await response.json();
-      setMessages((prev) => [...prev, { role: 'assistant', content: data.response }]);
     } catch (error) {
       console.error('Error:', error);
     }

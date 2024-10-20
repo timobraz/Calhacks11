@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@deepgram/sdk": "^3.8.1",
     "@radix-ui/react-dialog": "^1.1.2",
     "@radix-ui/react-slot": "^1.1.0",
     "@tabler/icons-react": "^3.19.0",
@@ -24,9 +25,12 @@
     "recharts": "^2.13.0",
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7",
-    "vaul": "^1.1.0",
     "tls": "^0.0.1",
-    "uuid": "^10.0.0"
+    "twilio": "^5.3.4",
+    "uuid": "^10.0.0",
+    "vaul": "^1.1.0",
+    "ffmpeg-static": "^5.1.0",
+    "fluent-ffmpeg": "^2.1.2"
   },
   "devDependencies": {
     "@types/node": "^20",
@@ -34,6 +38,7 @@
     "@types/react-dom": "^18",
     "@types/recharts": "^1.8.29",
     "@types/uuid": "^10.0.0",
+    "@types/fluent-ffmpeg": "^2.1.21",
     "aceternity-ui": "^0.2.2",
     "eslint": "^8",
     "eslint-config-next": "14.2.15",

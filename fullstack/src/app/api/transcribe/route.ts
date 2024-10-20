@@ -17,7 +17,7 @@ if (!DEEPGRAM_API_KEY) {
 }
 
 // Configure the runtime to use Node.js
-export const runtime = "nodejs";
+export const runtime = 'nodejs';
 
 // Helper function to convert NextRequest headers to the expected format
 const convertHeaders = (headers: Headers): Record<string, string> => {
@@ -106,6 +106,7 @@ const transcribeAudio = async (audioData: Buffer) => {
 export async function POST(req: NextRequest) {
   let audioPath = '';
   try {
+    console.log('Received POST request to /api/transcribe');
     // Parse the incoming form to extract files
     const { files } = await parseForm(req);
 
@@ -113,14 +114,16 @@ export async function POST(req: NextRequest) {
     const file = Array.isArray(files.file) ? files.file[0] : files.file;
 
     if (!file) {
+      console.error('No file uploaded');
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     }
-
     // Path to the uploaded file
     audioPath = file.filepath;
+    console.log('Audio file path:', audioPath);
 
     // Read the uploaded audio file as a buffer
     const audioData = await fs.readFile(audioPath);
+    console.log('Audio data read, size:', audioData.length);
 
     // Transcribe the audio
     const transcriptionData = await transcribeAudio(audioData);
@@ -135,6 +138,7 @@ export async function POST(req: NextRequest) {
     if (audioPath) {
       try {
         await fs.unlink(audioPath);
+        console.log('Deleted temporary file:', audioPath);
       } catch (err) {
         console.error('Error deleting file:', err);
       }
@@ -285,9 +289,6 @@ export async function POST(req: NextRequest) {
 //   }
 // }
 
-
-
-
 // VERSION 2 where the buffer works but many times it can't accurately get the input
 // ------------------------------------------------------------
 // import { NextRequest, NextResponse } from 'next/server';
@@ -410,8 +411,6 @@ export async function POST(req: NextRequest) {
 //   }
 // }
 
-
-
 // VERSION 1 where the buffer many times doesn't show up but it works
 // ------------------------------------------------------------
 // import { NextRequest, NextResponse } from 'next/server';
@@ -528,3 +527,5 @@ export async function POST(req: NextRequest) {
 //     }
 //   }
 // }
+
+

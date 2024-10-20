@@ -7,23 +7,6 @@ import Image from 'next/image';
 // import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar } from 'recharts';
 
 // Sample data for charts
-const readWriteData = [
-  { name: 'Jan', reads: 4000, writes: 2400 },
-  { name: 'Feb', reads: 3000, writes: 1398 },
-  { name: 'Mar', reads: 2000, writes: 9800 },
-  { name: 'Apr', reads: 2780, writes: 3908 },
-  { name: 'May', reads: 1890, writes: 4800 },
-  { name: 'Jun', reads: 2390, writes: 3800 },
-];
-
-const latencyData = [
-  { name: 'Jan', latency: 35 },
-  { name: 'Feb', latency: 28 },
-  { name: 'Mar', latency: 42 },
-  { name: 'Apr', latency: 30 },
-  { name: 'May', latency: 25 },
-  { name: 'Jun', latency: 32 },
-];
 
 function Task() {
   const [input, setInput] = useState('');
@@ -44,43 +27,42 @@ function Task() {
 
   useEffect(() => {
     const fetchInitialResponse = async () => {
-          setMessages([{ role: 'user', content: decodeURIComponent(prompt) }]);
-        try {
-          const response = await fetch('/api/perplexity', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ prompt: decodeURIComponent(prompt) }),
-          });
+      setMessages([{ role: 'user', content: decodeURIComponent(prompt) }]);
+      try {
+        const response = await fetch('/api/perplexity', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ prompt: decodeURIComponent(prompt) }),
+        });
 
-          if (!response.ok) {
-            throw new Error('Failed to get response from Perplexity API');
-          }
-
-          const data = await response.json();
-          setMessages((prev) => [...prev, { role: 'assistant', content: data.response }]);
-
-          // Now that we have the initial response, we can start the task
-          const taskResponse = await fetch('/api/request', {
-            method: 'POST',
-            body: JSON.stringify({ message: data.response }),
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          });
-          const { uuid } = await taskResponse.json();
-          setUuid(uuid);
-        } catch (error) {
-          console.error('Error:', error);
+        if (!response.ok) {
+          throw new Error('Failed to get response from Perplexity API');
         }
-        effectRan.current = true;
+
+        const data = await response.json();
+        setMessages((prev) => [...prev, { role: 'assistant', content: data.response }]);
+
+        // Now that we have the initial response, we can start the task
+        const taskResponse = await fetch('/api/request', {
+          method: 'POST',
+          body: JSON.stringify({ message: data.response }),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        const { uuid } = await taskResponse.json();
+        setUuid(uuid);
+      } catch (error) {
+        console.error('Error:', error);
+      }
+      effectRan.current = true;
     };
-     if (prompt && !effectRan.current) {
+    if (prompt && !effectRan.current) {
       fetchInitialResponse();
       effectRan.current = true;
     }
-
   }, [prompt]);
 
   useEffect(() => {
@@ -103,13 +85,16 @@ function Task() {
         if (done) break;
         currentLine += new TextDecoder().decode(value);
         if (currentLine.includes('\n')) {
-          const messages = currentLine.split('\n').filter(item => Boolean(item)).map(line => JSON.parse(line.trim()));
-          console.log("MESSAGES", messages);
+          const messages = currentLine
+            .split('\n')
+            .filter((item) => Boolean(item))
+            .map((line) => JSON.parse(line.trim()));
+          console.log('MESSAGES', messages);
           for (const message of messages) {
-          setMessages(prev => [...prev, { role: 'assistant', content: message.message }]);
-          if (message.preview) {
-            console.log("PREVIEW", message.preview);
-            setBrowserPreview(message.preview);
+            setMessages((prev) => [...prev, { role: 'assistant', content: message.message }]);
+            if (message.preview) {
+              console.log('PREVIEW', message.preview);
+              setBrowserPreview(message.preview);
             }
           }
           currentLine = '';
@@ -150,7 +135,7 @@ function Task() {
 
     try {
       let newPrompt = input;
-      if(!uuid && prompt) {
+      if (!uuid && prompt) {
         newPrompt = prompt;
         setPrompt('');
       }
@@ -165,7 +150,7 @@ function Task() {
       if (!response.ok) {
         throw new Error('Failed to get response from Perplexity API');
       }
-      if(!uuid) {
+      if (!uuid) {
         const taskResponse = await fetch('/api/request', {
           method: 'POST',
           body: JSON.stringify({ message: newPrompt }),
@@ -278,23 +263,44 @@ function Task() {
       >
         {/* Selenium Browser Display */}
         <div className="w-full flex-1 bg-gray-900 p-4 overflow-auto relative ">
-        <div className="bg-black rounded-lg p-4  flex flex-col h-full">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Selenium Browser Preview</h2>
-            <div className=" space-x-2">
-              <button className="p-1 bg-gray-800 rounded">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-5 h-5">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              </button>
+          <div className="bg-black rounded-lg p-4  flex flex-col h-full">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Selenium Browser Preview</h2>
+              <div className=" space-x-2">
+                <button className="p-1 bg-gray-800 rounded">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    className="w-5 h-5"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                </button>
+              </div>
             </div>
-            
-          </div >
-          <div className="h-full w-full flex justify-center items-center relative">
-            {browserPreview ? <Image src={`data:image/png;base64,${browserPreview}`} alt="Browser Preview" fill className="object-contain " /> : <span className="text-sm text-gray-300 whitespace-pre-wrap">Your browser preview will appear here...</span>}
+            <div className="h-full w-full flex justify-center items-center relative">
+              {browserPreview ? (
+                <Image
+                  src={`data:image/png;base64,${browserPreview}`}
+                  alt="Browser Preview"
+                  fill
+                  className="object-contain "
+                />
+              ) : (
+                <span className="text-sm text-gray-300 whitespace-pre-wrap">
+                  Your browser preview will appear here...
+                </span>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
         {/* Configuration Input Section */}
         <AnimatePresence>
@@ -347,5 +353,4 @@ function Task() {
     </div>
   );
 }
-
 export default Task;

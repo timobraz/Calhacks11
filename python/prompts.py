@@ -7,7 +7,7 @@ def GENERIC_SUBGOALS_PROMPT(goal: str):
 
     Each subgoal can make use of one or more of the following actions: ask_user, search, click, input, scroll, wait.
 
-    Be effecient, use the least number of steps.
+    We don't want to skip steps. However we can take multiple actions in a single subgoal if they are all related to the same page.
 
     SPECIFIC WEBSITE NAMES SHOULD BE INCLUDED IN THE SUBGOAL.
 
@@ -76,43 +76,43 @@ SUBGOAL_STEP_SCHEMA = {
                         },
                     },
                     "required": ["query"],
-                    "description": "A search query to input into Google. Must be used in conjunction with the 'search' action type. Do not use this to input text into an input field.",
+                    # "description": "A search query to input into Google. Must be used in conjunction with the 'search' action type. Do not use this to input text into an input field.",
                 },
                 {
                     "type": "object",
                     "properties": {
                         "xpath": {
                             "type": "string",
-                            "description": "XPath of the element to click. If this is not an XPath, I will kill you. If this is the word 'string', you will die. CONSIDER LOOKING AT THE HREF OR ARIA LABEL FOR THIS FIELD",
+                            # "description": "XPath of the element to click. If this is not an XPath, I will kill you. If this is the word 'string', you will die. CONSIDER LOOKING AT THE HREF OR ARIA LABEL FOR THIS FIELD",
                         },
                         "mouse_action": {
                             "type": "string",
                             "enum": ["left_click", "right_click"],
-                            "description": "The type of mouse action to take.",
+                            # "description": "The type of mouse action to take.",
                         },
                         "text": {
                             "type": "string",
-                            "description": "Text content of the element to click (optional).",
+                            # "description": "Text content of the element to click (optional).",
                         },
                     },
                     "required": ["xpath"],
-                    "description": "XPath of the element to click. Must be used in conjunction with the 'click' action type. If this is not an XPath, I will kill you.",
+                    # "description": "XPath of the element to click. Must be used in conjunction with the 'click' action type. If this is not an XPath, I will kill you.",
                 },
-                {
-                    "type": "object",
-                    "properties": {
-                        "xpath": {
-                            "type": "string",
-                            "description": "XPath of the input element. If this is not an XPath, I will kill you. If this is the word 'string', you will die. CONSIDER LOOKING AT THE PLACEHOLDER TEXT FOR THIS FIELD",
-                        },
-                        "text": {
-                            "type": "string",
-                            "description": "Text to input into the element, use this to input text into a text input field.",
-                        },
-                    },
-                    "required": ["xpath", "text"],
-                    "description": "XPath of the input element to input text into. Must be used in conjunction with the 'input' action type. If this is not an XPath, I will kill you.",
-                },
+                # {
+                #     "type": "object",
+                #     "properties": {
+                #         "xpath": {
+                #             "type": "string",
+                #             "description": "XPath of the input element. If this is not an XPath, I will kill you. If this is the word 'string', you will die. CONSIDER LOOKING AT THE PLACEHOLDER TEXT FOR THIS FIELD",
+                #         },
+                #         "text": {
+                #             "type": "string",
+                #             "description": "Text to input into the element, use this to input text into a text input field.",
+                #         },
+                #     },
+                #     "required": ["xpath", "text"],
+                #     "description": "XPath of the input element to input text into. Must be used in conjunction with the 'input' action type. If this is not an XPath, I will kill you.",
+                # },
                 {
                     "type": "object",
                     "properties": {
@@ -216,7 +216,7 @@ AUTOMATIC_SUBGOAL_SCHEMA = {
 }
 
 
-def ASK_USER_PROMPT(subgoal: dict):
+def ASK_USER_PROMPT(subgoal: dict, extra_hints: List[str]):
     return f"""
     The following is a specification for an operation that will be performed on a web page.
 
@@ -224,10 +224,21 @@ def ASK_USER_PROMPT(subgoal: dict):
 
     Does this operation contain the term 'example'? If so, provide the question that will be asked of the user to provide the necessary input. 
 
-    THERE ARE NO EXCEPTIONS TO THIS RULE. IF YOU SET needsUserInput = true, YOU MUST PROVIDE A QUESTION. IF YOU ERRONEOUSLY SET needsUserInput = true, YOU WILL DIE.
+    IF YOU SET needsUserInput = true, YOU MUST PROVIDE A QUESTION. IF YOU ERRONEOUSLY SET needsUserInput = true, YOU WILL DIE.
 
-    THE USER CAN ONLY PROVIDE PERSONAL INFORMATION. DO NOT ASK FOR ANYTHING RELATED TO THE WEB BROWSER. ASSUME THE USER NEED NOT EVEN KNOW THE WEB BROWSER EXISTS. 
+    THE USER CAN ONLY PROVIDE PERSONAL INFORMATION. DO NOT ASK FOR ANYTHING RELATED TO THE WEB BROWSER. ASSUME THE USER NEED NOT EVEN KNOW THE WEB BROWSER EXISTS.
+
+    AS FOR ALL REQUIRED USER INPUTS AT ONCE.
+
+    DO NOT FUCK AROUND AND SAY EVEN THOUGH EXAMPLE IS OPERATION WE STILL NEED USER INPUT. NO WE DON'T. SAY IT WITH ME. IF EXAMPLE IS NOT IN THE OPERATION, WE DO NOT NEED USER INPUT.
+    """ + (
+        f"""
+    The following as some hints that may already provide the necessary inputs, if so, WE DO NOT NEED USER INPUT. IF THE PROVIDED HINTS FULFILL THE OPERATION, WE DO NOT NEED USER INPUT. DO NOT FUCK AROUND AND ASK FOR INPUT IN THIS CASE
+    {extra_hints}
     """
+        if len(extra_hints) > 0
+        else ""
+    )
 
 
 ASK_USER_SCHEMA = {
@@ -266,9 +277,11 @@ def MANUAL_SUBGOAL_PROMPT(
     goal: str,
     cleaned_html: str,
     extra_hints: List[str],
+    bad_tries: List[str],
 ):
     return (
-        f"""
+        (
+            f"""
     We have access to only a search engine with Google. Please create an action to take us closer to the user's goal: {goal}.
      
     This goal is made up of the following subgoals: {subgoals}.
@@ -279,12 +292,14 @@ def MANUAL_SUBGOAL_PROMPT(
 
     Each subgoal can make use of one or more of the following actions: ask_user, search, click, input, scroll, wait.
 
-    The following are some relevant links and interactable elements on the page, use these to create XPaths:
+    The following are some relevant CLEANED HTML ELEMENTS on the page, use these to create XPaths:
     {cleaned_html}
 
     DO NOT ATTEMPT TO LOG IN WITH GOOGLE. 
 
     REMEMBER TO INPUT TEXT INTO INPUT FIELDS IF NECESSARY.
+
+    FEEL FREE TO TAKE MULTIPLE ACTIONS IN A SINGLE SUBGOAL IF THEY ARE ALL RELATED TO THE SAME PAGE. FOR EXAMPLE INPUTTING A USERNAME AND PASSWORD AND LOGGING IN CAN BE A SINGLE SUBGOAL. IN FACT, THIS IS PREFERRED.
 
     ASSUME THAT THE USER IS NOT LOGGED IN TO THE WEBSITE. 
 
@@ -317,9 +332,13 @@ def MANUAL_SUBGOAL_PROMPT(
             }},
         ]
     }}
+    **EXPLANATION**
+    THIS IS PERFECT! IT'S A CLICKABLE ELEMENT WITH AN HREF ATTRIBUTE TO IDENTIFY IT. href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href href. aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label aria-label, title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title title, internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text internal text 
 
     ### Example 3:
     **Subgoal**: "Search for Contact by Daft Punk in Spotify"
+    **Relevant HTML**
+    Includes {{'class': 'Input-sc-1gbx9xe-0 jWDhBG encore-text-body-medium CVuGEUIxLkNKpMds8AFS', 'data-encore-id': 'formInput', 'data-testid': 'search-input', 'placeholder': 'What do you want to play?', 'spellcheck': 'false', 'tabindex': '0', 'type': 'search', 'value': ''}}
     **Output**:
     {{
         "steps": [
@@ -332,8 +351,26 @@ def MANUAL_SUBGOAL_PROMPT(
             }},
         ]
     }}
+    **EXPLANATION**
+    THIS IS PERFECT! IT'S AN INPUT FIELD WITH A PLACEHOLDER TEXT TO IDENTIFY IT. placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder placeholder 
+
     """
-        + f"\n\n The following is some additional information to help you complete this subgoal: {extra_hints}"
+            + f"\n\n The following is some additional information to help you complete this subgoal: {extra_hints}"
+        )
+        + """
+        The following are subgoals that miserably failed: {bad_tries}
+        DO NOT TRY THESE SAME STEPS AGAIN.
+        """
+        + """
+        I CANNOT UNDERSTATE THE TROUBLE THAT WILL BECOME UPON YOU IF YOU SET xpath = 'string'. DO NOT FUCK AROUND AND GIVE ME A PATH OF DIVS AS AN XPATH. GIVE ME AN ELEMENT WITH AN HREF OR ARIA LABEL. OR GIVE ME AN INPUT FIELD WITH A PLACEHOLDER TEXT. USE THE HTML ELEMENTS TO CREATE THE XPATH. USE THE HTML ELEMENTS TO CREATE THE XPATH. USE THE HTML ELEMENTS TO CREATE THE XPATH. USE THE HTML ELEMENTS TO CREATE THE XPATH. USE THE HTML ELEMENTS TO CREATE THE XPATH. USE THE HTML ELEMENTS TO CREATE THE XPATH. USE THE HTML ELEMENTS TO CREATE THE XPATH. USE THE HTML ELEMENTS TO CREATE THE XPATH. USE THE HTML ELEMENTS TO CREATE THE XPATH. USE THE HTML ELEMENTS TO CREATE THE XPATH. USE THE HTML ELEMENTS TO CREATE THE XPATH. USE THE HTML ELEMENTS TO CREATE THE XPATH. USE THE HTML ELEMENTS TO CREATE THE XPATH. USE THE HTML ELEMENTS TO CREATE THE XPATH. USE THE HTML ELEMENTS TO CREATE THE XPATH. USE THE HTML ELEMENTS TO CREATE THE XPATH. USE THE HTML ELEMENTS TO CREATE THE XPATH. USE THE HTML ELEMENTS TO CREATE THE XPATH. USE THE HTML ELEMENTS TO CREATE THE XPATH. USE THE HTML ELEMENTS TO CREATE THE XPATH. 
+        """
+        + (
+            """
+        YOU HAVE NOW FAILED THIS SUBGOAL MANY TIMES. REMEMBER THE GOAL: {goal}. CONSIDER THE STATE OF THE BROWSER. CONSIDER THE OVERALL GOAL. MODIFY THE SUBGOAL. CONSIDER THE STATE OF THE BROWSER. CONSIDER THE OVERALL GOAL. MODIFY THE SUBGOAL. CONSIDER THE STATE OF THE BROWSER. CONSIDER THE OVERALL GOAL. MODIFY THE SUBGOAL. CONSIDER THE STATE OF THE BROWSER. CONSIDER THE OVERALL GOAL. MODIFY THE SUBGOAL. CONSIDER THE STATE OF THE BROWSER. CONSIDER THE OVERALL GOAL. MODIFY THE SUBGOAL. CONSIDER THE STATE OF THE BROWSER. CONSIDER THE OVERALL GOAL. MODIFY THE SUBGOAL. CONSIDER THE STATE OF THE BROWSER. CONSIDER THE OVERALL GOAL. MODIFY THE SUBGOAL. CONSIDER THE STATE OF THE BROWSER. CONSIDER THE OVERALL GOAL. MODIFY THE SUBGOAL. CONSIDER THE STATE OF THE BROWSER. CONSIDER THE OVERALL GOAL. MODIFY THE SUBGOAL. CONSIDER THE STATE OF THE BROWSER. CONSIDER THE OVERALL GOAL. MODIFY THE SUBGOAL. CONSIDER THE STATE OF THE BROWSER. CONSIDER THE OVERALL GOAL. MODIFY THE SUBGOAL. CONSIDER THE STATE OF THE BROWSER. CONSIDER THE OVERALL GOAL. MODIFY THE SUBGOAL. CONSIDER THE STATE OF THE BROWSER. CONSIDER THE OVERALL GOAL. MODIFY THE SUBGOAL. CONSIDER THE STATE OF THE BROWSER. CONSIDER THE OVERALL GOAL. MODIFY THE SUBGOAL. CONSIDER THE STATE OF THE BROWSER. CONSIDER THE OVERALL GOAL. MODIFY THE SUBGOAL. CONSIDER THE STATE OF THE BROWSER. CONSIDER THE OVERALL GOAL. MODIFY THE SUBGOAL. CONSIDER THE STATE OF THE BROWSER. CONSIDER THE OVERALL GOAL. MODIFY THE SUBGOAL. CONSIDER THE STATE OF THE BROWSER. CONSIDER THE OVERALL GOAL. MODIFY THE SUBGOAL. CONSIDER THE STATE OF THE BROWSER. CONSIDER THE OVERALL GOAL. MODIFY THE SUBGOAL. CONSIDER THE STATE OF THE BROWSER. CONSIDER THE OVERALL GOAL. MODIFY THE SUBGOAL. 
+        """
+            if len(bad_tries) >= 2
+            else ""
+        )
     )
 
 

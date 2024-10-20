@@ -12,10 +12,10 @@ class SeleniumDriver:
     def __init__(self):
         # Set up Chrome options for headless browsing
         chrome_options = Options()
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
+        # chrome_options.add_argument("--headless")
+        # chrome_options.add_argument("--disable-gpu")
+        # chrome_options.add_argument("--no-sandbox")
+        # chrome_options.add_argument("--disable-dev-shm-usage")
 
         # Initialize the WebDriver with headless options
         self.driver = webdriver.Chrome(options=chrome_options)
@@ -91,16 +91,20 @@ class SeleniumDriver:
         - Excludes any elements off the page or without text.
         - Excludes any base64 data.
         """
-        from selenium.webdriver.common.by import By
         import re
+        from selenium.webdriver.common.by import By
 
         # Set reasonable thresholds
         HREF_LENGTH_THRESHOLD = 100  # Max length of href to include
         TAG_LENGTH_THRESHOLD = 500  # Max length of outer HTML to consider
         elements_data = []
 
-        # Regex to detect base64 data
+        # Precompile regex to detect base64 data
         base64_pattern = re.compile(r"data:\s*image\/[^;]+;base64,")
+
+        # Get viewport dimensions once to improve performance
+        viewport_width = self.driver.execute_script("return window.innerWidth;")
+        viewport_height = self.driver.execute_script("return window.innerHeight;")
 
         # Helper function to check if element contains base64 data
         def contains_base64(element):
@@ -114,18 +118,14 @@ class SeleniumDriver:
 
         # Helper function to check if element is within the viewport
         def is_in_viewport(element):
-            return self.driver.execute_script(
-                """
-                var elem = arguments[0];
-                var rect = elem.getBoundingClientRect();
-                return (
-                    rect.top >= 0 &&
-                    rect.left >= 0 &&
-                    rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-                    rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-                );
-            """,
-                element,
+            rect = element.rect
+            return (
+                rect["width"] > 0
+                and rect["height"] > 0
+                and rect["x"] >= 0
+                and rect["y"] >= 0
+                and rect["x"] + rect["width"] <= viewport_width
+                and rect["y"] + rect["height"] <= viewport_height
             )
 
         # Helper function to check if element is valid based on type
@@ -141,6 +141,24 @@ class SeleniumDriver:
             else:
                 return base_checks and has_text(element)
 
+        # Common function to collect attributes without exceeding the length threshold
+        def collect_attributes(element):
+            attributes = self.driver.execute_script(
+                """
+                var items = {}; 
+                var attrs = arguments[0].attributes;
+                for (var i = 0; i < attrs.length; i++) {
+                    items[attrs[i].name] = attrs[i].value;
+                }
+                return items;
+            """,
+                element,
+            )
+            attr_length = sum(len(str(k)) + len(str(v)) for k, v in attributes.items())
+            if attr_length > TAG_LENGTH_THRESHOLD:
+                return {}
+            return attributes
+
         # 1. Extract all links with href shorter than the threshold
         links = self.driver.find_elements(By.TAG_NAME, "a")
         for link in links:
@@ -148,6 +166,13 @@ class SeleniumDriver:
                 if not is_valid_element(link, "link"):
                     continue
                 href = link.get_attribute("href")
+                if not href or href.strip() == "":
+                    # Try to get href from data-href or onclick attributes
+                    href = link.get_attribute("data-href") or ""
+                    if not href.strip():
+                        onclick = link.get_attribute("onclick") or ""
+                        if onclick.strip():
+                            href = f"javascript:{onclick.strip()}"
                 if href and len(href) <= HREF_LENGTH_THRESHOLD:
                     elements_data.append(
                         {
@@ -160,73 +185,39 @@ class SeleniumDriver:
                 continue
 
         # 2. Extract all visible inputs with placeholder text
-        inputs = self.driver.find_elements(By.TAG_NAME, "input")
+        inputs = self.driver.find_elements(By.XPATH, "//input[@placeholder]")
         for input_elem in inputs:
             try:
-                placeholder = input_elem.get_attribute("placeholder") or ""
-                if not placeholder.strip():
-                    continue
                 if not is_valid_element(input_elem, "input"):
                     continue
-                # Collect attributes
-                attributes = self.driver.execute_script(
-                    """
-                    var items = {}; 
-                    var attrs = arguments[0].attributes;
-                    for (var i = 0; i < attrs.length; i++) {
-                        items[attrs[i].name] = attrs[i].value;
-                    }
-                    return items;
-                """,
-                    input_elem,
-                )
-                attributes["placeholder"] = placeholder.strip()
-                # Exclude inputs with attributes longer than the threshold
-                attr_length = sum(
-                    len(str(k)) + len(str(v)) for k, v in attributes.items()
-                )
-                if attr_length > TAG_LENGTH_THRESHOLD:
-                    continue
-                elements_data.append(
-                    {
-                        "type": "input",
-                        "attributes": attributes,
-                    }
-                )
+                attributes = collect_attributes(input_elem)
+                if attributes:
+                    elements_data.append(
+                        {
+                            "type": "input",
+                            "attributes": attributes,
+                        }
+                    )
             except Exception:
                 continue
 
         # 3. Extract all visible buttons with text
-        buttons = self.driver.find_elements(By.TAG_NAME, "button")
+        buttons = self.driver.find_elements(
+            By.XPATH, "//button[normalize-space(text())!='']"
+        )
         for button in buttons:
             try:
                 if not is_valid_element(button, "button"):
                     continue
-                # Collect attributes
-                attributes = self.driver.execute_script(
-                    """
-                    var items = {}; 
-                    var attrs = arguments[0].attributes;
-                    for (var i = 0; i < attrs.length; i++) {
-                        items[attrs[i].name] = attrs[i].value;
-                    }
-                    return items;
-                """,
-                    button,
-                )
-                # Exclude buttons with attributes longer than the threshold
-                attr_length = sum(
-                    len(str(k)) + len(str(v)) for k, v in attributes.items()
-                )
-                if attr_length > TAG_LENGTH_THRESHOLD:
-                    continue
-                elements_data.append(
-                    {
-                        "type": "button",
-                        "text": button.text.strip(),
-                        "attributes": attributes,
-                    }
-                )
+                attributes = collect_attributes(button)
+                if attributes:
+                    elements_data.append(
+                        {
+                            "type": "button",
+                            "text": button.text.strip(),
+                            "attributes": attributes,
+                        }
+                    )
             except Exception:
                 continue
 
@@ -238,32 +229,16 @@ class SeleniumDriver:
             try:
                 if not is_valid_element(elem, "clickable"):
                     continue
-                # Collect attributes
-                attributes = self.driver.execute_script(
-                    """
-                    var items = {}; 
-                    var attrs = arguments[0].attributes;
-                    for (var i = 0; i < attrs.length; i++) {
-                        items[attrs[i].name] = attrs[i].value;
-                    }
-                    return items;
-                """,
-                    elem,
-                )
-                # Exclude elements with attributes longer than the threshold
-                attr_length = sum(
-                    len(str(k)) + len(str(v)) for k, v in attributes.items()
-                )
-                if attr_length > TAG_LENGTH_THRESHOLD:
-                    continue
-                elements_data.append(
-                    {
-                        "type": "clickable",
-                        "tag": elem.tag_name.lower(),
-                        "text": elem.text.strip(),
-                        "attributes": attributes,
-                    }
-                )
+                attributes = collect_attributes(elem)
+                if attributes:
+                    elements_data.append(
+                        {
+                            "type": "clickable",
+                            "tag": elem.tag_name.lower(),
+                            "text": elem.text.strip(),
+                            "attributes": attributes,
+                        }
+                    )
             except Exception:
                 continue
 

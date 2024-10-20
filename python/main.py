@@ -6,7 +6,7 @@ from pipeline import SpiderPipeline
 KAFKA_BROKER = "8.tcp.us-cal-1.ngrok.io:16714"  # Use your ngrok address here
 
 
-async def process_message(message, pipeline: SpiderPipeline, producer: KafkaProducer):
+async def process_message(message, pipeline: SpiderPipeline, producer: KafkaProducer, consumer: KafkaConsumer):
     message_string = message.value.decode("utf-8")
     message_json = json.loads(message_string)
     tasks = []
@@ -30,7 +30,7 @@ async def process_message(message, pipeline: SpiderPipeline, producer: KafkaProd
                 }
             ).encode("utf-8"),
         )
-        tasks.append(pipeline.run(query, producer, uuid))
+        tasks.append(pipeline.run(query, producer, consumer, uuid))
         tasks.append(pipeline.take_screenshots(producer, uuid))
 
     if tasks:
@@ -43,7 +43,7 @@ async def consume_messages(consumer, pipeline, producer):
         tasks = []
         for topic_partition, msgs in messages.items():
             for message in msgs:
-                tasks.append(process_message(message, pipeline, producer))
+                tasks.append(process_message(message, pipeline, producer, consumer))
         if tasks:
             await asyncio.gather(*tasks)
         await asyncio.sleep(0.1)  # Small delay to prevent CPU overuse

@@ -14,9 +14,7 @@ import vertexai
 from vertexai.generative_models import GenerativeModel, GenerationConfig, Part
 from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
 
-from kafka import KafkaProducer
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+from kafka import KafkaProducer, KafkaConsumer
 import base64
 
 from sqlalchemy import create_engine, text
@@ -43,9 +41,9 @@ def normalize_embedding(embedding: List[float]) -> List[float]:
     embedding_values = np.array(embedding)
     norm = np.linalg.norm(embedding_values)
     if norm == 0:
-        return embedding_values
+        return embedding_values.tolist()
     else:
-        return embedding_values / norm
+        return (embedding_values / norm).tolist()
 
 
 class SpiderPipeline:
@@ -59,10 +57,17 @@ class SpiderPipeline:
         self.dimensionality = 256
         self.vector_embedding_task = "RETRIEVAL_DOCUMENT"
 
+        self.llm_experimental = GenerativeModel("gemini-flash-experimental")
+        self.pro_experimental = GenerativeModel("gemini-pro-experimental")
         self.llm = GenerativeModel("gemini-1.5-flash-002")
+        self.pro = GenerativeModel("gemini-1.5-pro-002")
         self.embed_model = TextEmbeddingModel.from_pretrained("text-embedding-004")
 
-        engine = create_engine(os.getenv("DATABASE_URL"))
+        engine = create_engine(
+            os.getenv("DATABASE_URL"),
+            json_serializer=json.dumps,
+            json_deserializer=json.loads,
+        )
         self.db = engine.connect()
 
         self.selenium_driver = SeleniumDriver()
@@ -122,7 +127,11 @@ class SpiderPipeline:
         producer.send(uuid, message.encode("utf-8"))
 
     async def run(
-        self, query: str, producer: KafkaProducer | None = None, uuid: str | None = None
+        self,
+        query: str,
+        producer: KafkaProducer | None = None,
+        consumer: KafkaConsumer | None = None,
+        uuid: str | None = None,
     ):
 
         tracer = trace.get_tracer(__name__)
@@ -130,12 +139,12 @@ class SpiderPipeline:
         with tracer.start_as_current_span("spider_pipeline"):
             with tracer.start_as_current_span("create generic subgoals"):
                 task1 = asyncio.to_thread(
-                    self.llm.generate_content,
+                    self.pro_experimental.generate_content,
                     [GENERIC_SUBGOALS_PROMPT(query)],
                     generation_config=GenerationConfig(
                         max_output_tokens=1024,
                         # top_p=0.95,
-                        temperature=0.0,
+                        temperature=0.2,
                         response_schema=GENERIC_SUBGOALS_SCHEMA,
                         response_mime_type="application/json",
                     ),
@@ -188,6 +197,8 @@ class SpiderPipeline:
                     *normalized_generic_subgoal_embeddings,
                     normalized_generic_goal_embedding,
                 ]:
+                    subgoal_embedding_json = json.dumps(subgoal_embedding)
+
                     result = self.db.execute(
                         text(
                             """
@@ -198,7 +209,7 @@ class SpiderPipeline:
                             LIMIT 2
                             """
                         ),
-                        {"subgoal_embedding": subgoal_embedding},
+                        {"subgoal_embedding": subgoal_embedding_json},
                     )
                     similar_subgoals = result.fetchall()
                     similar_generic_subgoals.extend(similar_subgoals)
@@ -207,14 +218,14 @@ class SpiderPipeline:
                 for row in similar_generic_subgoals:
                     clues.append(
                         {
-                            "subgoal_id": row["id"],
                             "subgoal_text": row["subgoal_text"],
+                            "steps_taken": row["steps_taken"],
                             "cosine_similarity": row["cosine_similarity"],
                         }
                     )
 
             with tracer.start_as_current_span("create plan"):
-                response = self.llm.generate_content(
+                response = self.llm_experimental.generate_content(
                     [SPECIFIC_PLAN_PROMPT(generic_subgoals, clues, query)],
                     generation_config=GenerationConfig(
                         max_output_tokens=1024,
@@ -228,6 +239,7 @@ class SpiderPipeline:
                 subgoals = json.loads(response.text)["subgoals"]
 
             extra_hints = []
+            bad_tries = []
             new_subgoals = []
             with tracer.start_as_current_span("execute plan"):
                 i = 0
@@ -255,7 +267,7 @@ class SpiderPipeline:
                     if subgoals[i]["subgoalType"] == "unknownSteps":
                         subgoal_is_new = True
                         with tracer.start_as_current_span("generate manual action"):
-                            response = self.llm.generate_content(
+                            response = self.pro.generate_content(
                                 [
                                     MANUAL_SUBGOAL_PROMPT(
                                         [
@@ -270,13 +282,14 @@ class SpiderPipeline:
                                         query,
                                         self.selenium_driver.extract_significant_elements(),
                                         extra_hints,
+                                        bad_tries,
                                     ),
                                     before_subgoal_image_part,
                                 ],
                                 generation_config=GenerationConfig(
                                     max_output_tokens=1024,
                                     # top_p=0.95,
-                                    temperature=0.0,
+                                    temperature=0.8,
                                     response_schema=MANUAL_SUBGOAL_SCHEMA,
                                     response_mime_type="application/json",
                                 ),
@@ -286,15 +299,23 @@ class SpiderPipeline:
                             response_content = json.loads(response.text)
                             subgoals[i]["subgoal"] = response_content["subgoal"]
 
-                    print("RESPONSE CONTENT", response_content)
+                    print("ACTION", response_content)
+
+                    if producer:
+                        producer.send(
+                            uuid,
+                            json.dumps(
+                                {"info": response_content, "display": True}
+                            ).encode("utf-8"),
+                        )
 
                     needs_user_input = False
                     with tracer.start_as_current_span(
                         "determine if user input required"
                     ):
-                        response = self.llm.generate_content(
+                        response = self.pro_experimental.generate_content(
                             [
-                                ASK_USER_PROMPT(subgoals[i]["subgoal"]),
+                                ASK_USER_PROMPT(subgoals[i]["subgoal"], extra_hints),
                                 before_subgoal_image_part,
                             ],
                             generation_config=GenerationConfig(
@@ -313,10 +334,26 @@ class SpiderPipeline:
 
                     if needs_user_input:
                         with tracer.start_as_current_span("ask user for input"):
-                            answer = input(question)
-                            extra_hints.append(
-                                f"question: {question}, answer: {answer}"
-                            )
+                            if producer:
+                                producer.send(
+                                    uuid,
+                                    json.dumps(
+                                        {"question": question, "display": True}
+                                    ).encode("utf-8"),
+                                )
+
+                                for message in consumer:
+                                    answer = json.loads(message.value).get("answer")
+                                    if answer:
+                                        extra_hints.append(
+                                            f"question: {question}, answer: {answer}"
+                                        )
+                                        break
+                            else:
+                                answer = input(question)
+                                extra_hints.append(
+                                    f"question: {question}, answer: {answer}"
+                                )
 
                         with tracer.start_as_current_span(
                             "enhance subgoal with user input"
@@ -376,7 +413,7 @@ class SpiderPipeline:
                                 else:
                                     print(f"Unknown action type: {action_type}")
 
-                        await asyncio.sleep(1)
+                        await asyncio.sleep(2)
                         self.selenium_driver.wait_until_loaded()
 
                         with tracer.start_as_current_span(
@@ -405,7 +442,7 @@ class SpiderPipeline:
                             )
 
                         with tracer.start_as_current_span("analyze subgoal"):
-                            response = self.llm.generate_content(
+                            response = self.pro_experimental.generate_content(
                                 [
                                     SUBGOAL_ANALYSIS_PROMPT(
                                         [
@@ -434,19 +471,20 @@ class SpiderPipeline:
                             subgoal_analysis = json.loads(response.text)
 
                             if subgoal_analysis["subgoal_complete"]:
-                                i += 1
-
                                 if subgoal_is_new:
                                     new_subgoals.append(subgoals[i])
+
+                                i += 1
+                                bad_tries = []
 
                                 if subgoal_analysis["goal_complete"]:
                                     break
 
                     except Exception as e:
                         print("Error executing subgoal steps", e)
-                        extra_hints.append(
-                            f"Previous subgoal that miserably failed: {subgoals[i]['subgoal']} DO NOT TRY THESE SAME STEPS AGAIN"
-                        )
+                        bad_tries.append(subgoals[i]["subgoal"])
+
+            print("final screenshot", after_subgoal_screenshot_path)
 
             with tracer.start_as_current_span("cache new subgoals"):
                 generic_new_subgoals = [
@@ -455,8 +493,7 @@ class SpiderPipeline:
                         [GENERIC_GOAL_PROMPT(subgoal["subgoal"]["subgoal"])],
                         generation_config=GenerationConfig(
                             max_output_tokens=1024,
-                            # top_p=0.95,
-                            temperature=0.0,
+                            temperature=1.0,
                             response_schema=GENERIC_GOAL_SCHEMA,
                             response_mime_type="application/json",
                         ),
@@ -484,18 +521,25 @@ class SpiderPipeline:
                     for embedding in generic_new_subgoal_embeddings
                 ]
 
-                for subgoal, embedding in zip(
-                    generic_new_subgoals_responses,
-                    normalized_generic_new_subgoal_embeddings,
+                for i, (subgoal, embedding) in enumerate(
+                    zip(
+                        generic_new_subgoals_responses,
+                        normalized_generic_new_subgoal_embeddings,
+                    )
                 ):
+                    embedding_json = json.dumps(embedding)
+
                     self.db.execute(
-                        """
-                        INSERT INTO subgoal_memory (embedding, subgoal_text)
-                        VALUES (:embedding, :subgoal_text)
-                        """,
+                        text(
+                            """
+                            INSERT INTO subgoal_memory (embedding, subgoal_text, steps_taken)
+                            VALUES (:embedding, :subgoal_text, :steps_taken)
+                            """
+                        ),
                         {
-                            "embedding": embedding.tolist(),
+                            "embedding": embedding_json,
                             "subgoal_text": json.loads(subgoal.text)["goal"],
+                            "steps_taken": json.dumps(subgoals[i]["subgoal"]["steps"]),
                         },
                     )
 
@@ -505,4 +549,4 @@ class SpiderPipeline:
 
 if __name__ == "__main__":
     pipeline = SpiderPipeline()
-    asyncio.run(pipeline.run("Add Hello by Adele to my Spotify Playlist"))
+    asyncio.run(pipeline.run("download vscode"))

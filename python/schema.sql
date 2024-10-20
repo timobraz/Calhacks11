@@ -2,7 +2,7 @@ DROP TABLE IF EXISTS subgoal_memory;
 
 CREATE TABLE subgoal_memory (
     id SERIAL PRIMARY KEY,
-    image_field BLOB,
-    text_field TEXT,
+    subgoal_text TEXT,
+    steps_taken TEXT,
     embedding VECTOR(256)
 );

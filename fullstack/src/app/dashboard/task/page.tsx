@@ -35,20 +35,23 @@ function Task() {
   const effectRan = useRef(false);
 
   const searchParams = useSearchParams();
-  const message = searchParams?.get('message');
+  const [prompt, setPrompt] = useState('');
   const router = useRouter();
 
   useEffect(() => {
+    setPrompt(searchParams.get('message') || '');
+  }, [searchParams]);
+
+  useEffect(() => {
     const fetchInitialResponse = async () => {
-      if (message && !effectRan.current) {
-        setMessages([{ role: 'user', content: decodeURIComponent(message) }]);
+          setMessages([{ role: 'user', content: decodeURIComponent(prompt) }]);
         try {
           const response = await fetch('/api/perplexity', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ prompt: decodeURIComponent(message) }),
+            body: JSON.stringify({ prompt: decodeURIComponent(prompt) }),
           });
 
           if (!response.ok) {
@@ -72,14 +75,13 @@ function Task() {
           console.error('Error:', error);
         }
         effectRan.current = true;
-      }
     };
-     if (message && !effectRan.current) {
+     if (prompt && !effectRan.current) {
       fetchInitialResponse();
       effectRan.current = true;
     }
 
-  }, [message]);
+  }, [prompt]);
 
   useEffect(() => {
     const streamMessages = async () => {
@@ -147,6 +149,11 @@ function Task() {
     setInput('');
 
     try {
+      let newPrompt = input;
+      if(!uuid && prompt) {
+        newPrompt = prompt;
+        setPrompt('');
+      }
       const response = await fetch('/api/perplexity', {
         method: 'POST',
         headers: {
@@ -157,6 +164,17 @@ function Task() {
 
       if (!response.ok) {
         throw new Error('Failed to get response from Perplexity API');
+      }
+      if(!uuid) {
+        const taskResponse = await fetch('/api/request', {
+          method: 'POST',
+          body: JSON.stringify({ message: newPrompt }),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        const { uuid } = await taskResponse.json();
+        setUuid(uuid);
       }
 
       const data = await response.json();

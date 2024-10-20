@@ -12,10 +12,10 @@ class SeleniumDriver:
     def __init__(self):
         # Set up Chrome options for headless browsing
         chrome_options = Options()
-        # chrome_options.add_argument("--headless")
-        # chrome_options.add_argument("--disable-gpu")
-        # chrome_options.add_argument("--no-sandbox")
-        # chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
 
         # Initialize the WebDriver with headless options
         self.driver = webdriver.Chrome(options=chrome_options)
@@ -41,22 +41,34 @@ class SeleniumDriver:
         self.driver.get("https://www.google.com")
 
     def click(self, selector: str, mouse_action: str, text: Optional[str]):
-        elements = self.driver.find_elements(By.XPATH, selector)
-        selected_element = None
-        if text:
+        if selector == "string" and text:
+            # Find the first clickable element matching the text
+            elements = self.driver.find_elements(
+                By.XPATH, f"//*[contains(text(), '{text}')]"
+            )
+            selected_element = None
             for element in elements:
-                if text in element.text:
+                if element.is_displayed() and element.is_enabled():
                     selected_element = element
                     break
         else:
-            if elements:
-                selected_element = elements[0]
+            elements = self.driver.find_elements(By.XPATH, selector)
+            selected_element = None
+            if text:
+                for element in elements:
+                    if text in element.text:
+                        selected_element = element
+                        break
+            else:
+                if elements:
+                    selected_element = elements[0]
 
         if selected_element:
             if mouse_action == "left_click":
                 selected_element.click()
             elif mouse_action == "right_click":
-                selected_element.click(button=2)
+                actions = webdriver.ActionChains(self.driver)
+                actions.context_click(selected_element).perform()
 
     def input(self, selector: str, value: str):
         element = self.driver.find_elements(By.XPATH, selector)[0]

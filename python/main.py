@@ -17,6 +17,7 @@ async def process_message(message, pipeline: SpiderPipeline, producer: KafkaProd
         tasks.append(pipeline.navigate(url, producer, uuid))
 
     if message_json.get("action") == "create_browser":
+        print("MESSAGE", message_json)
         uuid = message_json["uuid"]
         query = message_json["message"]
         print(uuid, query, "creating browser")

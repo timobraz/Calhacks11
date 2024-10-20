@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 // import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar } from 'recharts';
 
-
 function Task() {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
@@ -14,6 +13,8 @@ function Task() {
   const [uuid, setUuid] = useState('');
   const [convId, setConvId] = useState('');
   const [showConfig, setShowConfig] = useState(false);
+  const [configQuestion, setConfigQuestion] = useState('');
+  const [configAnswer, setConfigAnswer] = useState('');
   const effectRan = useRef(false);
 
   const searchParams = useSearchParams();
@@ -36,25 +37,25 @@ function Task() {
           body: JSON.stringify({ prompt: decodeURIComponent(prompt) }),
         });
 
-          if (!response.ok) {
-            throw new Error('Failed to get response from Perplexity API');
-          }
+        if (!response.ok) {
+          throw new Error('Failed to get response from Perplexity API');
+        }
 
-          const data = await response.json();
-          setMessages((prev) => [...prev, { role: 'assistant', content: data.response }]);
+        const data = await response.json();
+        setMessages((prev) => [...prev, { role: 'assistant', content: data.response }]);
 
-          // Now that we have the initial response, we can start the task
-          const taskResponse = await fetch('/api/request', {
-            method: 'POST',
-            body: JSON.stringify({ message: data.response }),
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          });
-          const { uuid, convId } = await taskResponse.json();
-          setUuid(uuid);
-          setConvId(convId);
-        } catch (error) {
+        // Now that we have the initial response, we can start the task
+        const taskResponse = await fetch('/api/request', {
+          method: 'POST',
+          body: JSON.stringify({ message: data.response }),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        const { uuid, convId } = await taskResponse.json();
+        setUuid(uuid);
+        setConvId(convId);
+      } catch (error) {
         console.error('Error:', error);
       }
       setUuid(uuid);
@@ -68,11 +69,13 @@ function Task() {
 
   useEffect(() => {
     const streamMessages = async () => {
-      if (!uuid) return;
+      // if (!uuid) return;
+
+      console.log('MADE BACKEND');
 
       const response = await fetch(`/api/request/${uuid}`, {
         method: 'POST',
-        body: JSON.stringify({ message: prompt }),
+        body: JSON.stringify({ message: searchParams.get('message') }),
         headers: {
           'Content-Type': 'application/json',
         },
@@ -92,12 +95,16 @@ function Task() {
             .map((line) => JSON.parse(line.trim()));
           console.log('MESSAGES', messages);
           for (const message of messages) {
-          if(message.display === true) {
-            setMessages(prev => [...prev, { role: 'assistant', content: message.message }]);
-          }
-          if (message.preview) {
-            console.log('PREVIEW', message.preview);
-            setBrowserPreview(message.preview);
+            if (message.display === true) {
+              setMessages((prev) => [...prev, { role: 'assistant', content: message.message }]);
+            }
+            if (message.preview) {
+              console.log('PREVIEW', message.preview);
+              setBrowserPreview(message.preview);
+            }
+            if ('question' in message) {
+              setConfigQuestion(message.question);
+              setShowConfig(true);
             }
           }
           currentLine = '';
@@ -108,7 +115,7 @@ function Task() {
     streamMessages();
 
     return () => {
-      if(uuid) {
+      if (uuid) {
         handleDeleteTask();
       }
     };
@@ -158,7 +165,7 @@ function Task() {
 
       const data = await response.json();
       setMessages((prev) => [...prev, { role: 'assistant', content: data.response }]);
-      if(!uuid) {
+      if (!uuid) {
         const taskResponse = await fetch('/api/request', {
           method: 'POST',
           body: JSON.stringify({ message: newPrompt }),
@@ -171,18 +178,15 @@ function Task() {
         setConvId(convId);
         console.log('UUID', uuid);
         console.log('CONV ID', convId);
-      }
-      else {
-         await fetch(`/api/request/${convId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ message: input, action: 'navigate' }),
+      } else {
+        await fetch(`/api/request/${convId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ message: input, action: 'navigate' }),
           headers: {
             'Content-Type': 'application/json',
           },
         });
-
       }
-
     } catch (error) {
       console.error('Error:', error);
     }
@@ -331,26 +335,37 @@ function Task() {
               transition={{ duration: 0.3 }}
               className="absolute bottom-16 left-4 right-4 bg-white/10 backdrop-blur-md rounded-lg p-6 border border-white/20 shadow-lg"
             >
-              <h2 className="text-lg font-semibold text-white mb-4">Configuration Required</h2>
+              <h2 className="text-lg font-semibold text-white mb-4">{configQuestion}</h2>
               <div className="space-y-4">
                 <Input
                   type="text"
-                  placeholder="Username"
+                  placeholder="Answer"
                   className="bg-white/5 border-white/10 text-white placeholder-gray-400"
+                  value={configAnswer}
+                  onChange={(e) => setConfigAnswer(e.target.value)}
                 />
-                <Input
+                {/* <Input
                   type="password"
                   placeholder="Password"
                   className="bg-white/5 border-white/10 text-white placeholder-gray-400"
-                />
-                <Input
+                /> */}
+                {/* <Input
                   type="text"
                   placeholder="Additional Info"
                   className="bg-white/5 border-white/10 text-white placeholder-gray-400"
-                />
+                /> */}
               </div>
               <button
-                onClick={() => setShowConfig(false)}
+                onClick={() => {
+                  setShowConfig(false);
+                  fetch(`/api/request/${uuid}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ answer: configAnswer }),
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                  });
+                }}
                 className="mt-6 w-full bg-black/10 hover:bg-teal-600 text-white px-4 py-2 rounded-md transition-colors duration-200 ease-in-out backdrop-blur-sm"
               >
                 Submit

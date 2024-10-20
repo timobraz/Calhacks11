@@ -134,6 +134,8 @@ class SpiderPipeline:
         uuid: str | None = None,
     ):
 
+        print("RUNNING WITH QUERY", query)
+
         tracer = trace.get_tracer(__name__)
 
         with tracer.start_as_current_span("spider_pipeline"):
@@ -305,7 +307,10 @@ class SpiderPipeline:
                         producer.send(
                             uuid,
                             json.dumps(
-                                {"info": response_content, "display": True}
+                                {
+                                    "message": f"Taking action: {response_content}",
+                                    "display": True,
+                                }
                             ).encode("utf-8"),
                         )
 
@@ -485,6 +490,45 @@ class SpiderPipeline:
                         bad_tries.append(subgoals[i]["subgoal"])
 
             print("final screenshot", after_subgoal_screenshot_path)
+
+            with tracer.start_as_current_span("send final message"):
+                response = self.pro.generate_content(
+                    [
+                        f"Briefly summarize what you did to complete the goal. Goal: {query}, Subgoals: {subgoals}"
+                    ],
+                    generation_config=GenerationConfig(
+                        max_output_tokens=1024,
+                        # top_p=0.95,
+                        temperature=0.0,
+                        response_mime_type="text/plain",
+                    ),
+                    stream=False,
+                )
+
+                response_content = response.text
+
+                image = Image.open(after_subgoal_screenshot_path)
+                image = image.resize((image.width // 5, image.height // 5))
+                image.save(after_subgoal_screenshot_path)
+                image_bytes = open(after_subgoal_screenshot_path, "rb").read()
+                base64_image = base64.b64encode(image_bytes).decode("utf-8")
+
+                if producer:
+                    producer.send(
+                        uuid,
+                        bytes(
+                            json.dumps(
+                                {
+                                    "message": response_content,
+                                    "preview": base64_image,
+                                    "display": True,
+                                }
+                            ),
+                            "utf-8",
+                        ),
+                    )
+
+                print(response_content)
 
             with tracer.start_as_current_span("cache new subgoals"):
                 generic_new_subgoals = [

@@ -14,7 +14,7 @@ const subscribedTopics: Set<string> = new Set();
 
 export const getConsumer = async (): Promise<Consumer> => {
   if (!consumer) {
-    consumer = kafka.consumer({ groupId: `my-group-${uuidv4()}`, maxBytes: 1024 * 1024 * 6 });
+    consumer = kafka.consumer({ groupId: `my-group`, maxBytes: 1024 * 1024 * 6 });
     await consumer.connect();
   }
   return consumer;
@@ -55,7 +55,9 @@ export async function sendMessage(topic: string, message: string) {
 }
 
 export async function deleteTopic(topic: string) {
-  await admin.deleteTopics({ topics: [topic] });
+  await admin.deleteTopics({ topics: [topic] }).catch((e) => {
+    console.log('Error deleting topic', e);
+  });
   subscribedTopics.delete(topic);
   await updateConsumerSubscriptions();
 }

@@ -3,22 +3,12 @@
 // Import the Deepgram SDK
 import { createClient } from '@deepgram/sdk';
 import { NextRequest, NextResponse } from 'next/server';
-import ffmpeg from 'fluent-ffmpeg';
-import ffmpegStatic from 'ffmpeg-static';
 import twilio from 'twilio';
-import { setLatestTranscription } from '@/lib/transcriptionStore';
-
-// Set ffmpeg path
-if (ffmpegStatic) {
-  ffmpeg.setFfmpegPath(ffmpegStatic);
-} else {
-  console.error('ffmpeg-static package not found. Please install it.');
-}
+import { sendMessage, startConsuming, subscribeToTopic } from '@/lib/kafka';
 
 // Create a Deepgram client instance
 const deepgram = createClient(process.env.DEEPGRAM_API_KEY!);
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-console.log('Deepgram client deepgram', process.env.DEEPGRAM_API_KEY);
 async function transcribeAudio(recordingSID: string) {
   try {
     const options = {
@@ -27,9 +17,8 @@ async function transcribeAudio(recordingSID: string) {
     };
     const recording = await twilioClient.recordings(recordingSID).fetch();
     const transcribe = recording.mediaUrl;
-    
-    // Use environment variables for sensitive information
-    const finalUrl = `https://${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}@${new URL(transcribe).host}${new URL(transcribe).pathname}`;
+
+    const finalUrl = `https://${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}@${transcribe.split('://')[1]}`;
     console.log('Final URL:', finalUrl);
     const { result, error } = await deepgram.listen.prerecorded.transcribeUrl({ url: finalUrl }, options);
 
@@ -57,12 +46,38 @@ export async function POST(req: NextRequest) {
 
     const transcription = await transcribeAudio(recordingSid);
 
-    // Store the latest transcription
-    setLatestTranscription(transcription);
+    sendMessage('phone_topic', transcription);
 
     return NextResponse.json({ success: true, transcription });
   } catch (error) {
     console.error('Error during transcription:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
+}
+
+export async function GET() {
+  const stream = new ReadableStream({
+    async start(controller) {
+      await subscribeToTopic('phone_topic');
+      console.log(`listening to phone_topic`);
+
+      await startConsuming((kafkaMessage, topic) => {
+        console.log('RECEIVED MESSAGE', topic);
+        if (topic === 'phone_topic') {
+          const responseMessage = JSON.parse(kafkaMessage.value?.toString() || '{}');
+          const encodedMessage = new TextEncoder().encode(responseMessage + '\n');
+          controller.enqueue(encodedMessage);
+        }
+      });
+    },
+    async cancel() {},
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    },
+  });
 }

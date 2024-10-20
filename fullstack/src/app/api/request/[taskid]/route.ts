@@ -5,7 +5,6 @@ export async function POST(req: NextRequest, { params }: { params: { taskid: str
   const { taskid } = params;
   console.log('Task ID:', taskid);
   const { message } = await req.json();
-  await stopKafkaConnections();
 
   const stream = new ReadableStream({
     async start(controller) {

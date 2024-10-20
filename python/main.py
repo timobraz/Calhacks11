@@ -3,7 +3,7 @@ import json
 from kafka import KafkaConsumer, KafkaProducer
 from pipeline import SpiderPipeline
 
-KAFKA_BROKER = "4.tcp.us-cal-1.ngrok.io:18817"  # Use your ngrok address here
+KAFKA_BROKER = "8.tcp.us-cal-1.ngrok.io:16714"  # Use your ngrok address here
 
 
 async def process_message(message, pipeline: SpiderPipeline, producer: KafkaProducer):

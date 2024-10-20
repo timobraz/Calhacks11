@@ -1,4 +1,5 @@
 import { Kafka, Consumer, Producer, KafkaMessage } from 'kafkajs';
+import { v4 as uuidv4 } from 'uuid';
 
 const kafka = new Kafka({
   clientId: 'my-app',
@@ -13,7 +14,7 @@ const subscribedTopics: Set<string> = new Set();
 
 export const getConsumer = async (): Promise<Consumer> => {
   if (!consumer) {
-    consumer = kafka.consumer({ groupId: `my-group`, maxBytes: 1024 * 1024 * 6 });
+    consumer = kafka.consumer({ groupId: `my-group-${uuidv4()}`, maxBytes: 1024 * 1024 * 6 });
     await consumer.connect();
   }
   return consumer;
